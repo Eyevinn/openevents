@@ -50,7 +50,7 @@ export const speakerSchema = z.object({
   bio: z.string().optional(),
   photo: z.string().url().optional().nullable(),
   email: z.string().email().optional().nullable(),
-  socialLinks: z.record(z.string()).optional(),
+  socialLinks: z.record(z.string(), z.string()).optional(),
   sortOrder: z.number().default(0),
 })
 
