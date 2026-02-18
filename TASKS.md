@@ -215,31 +215,31 @@ Note: Implemented currently as `GET /api/events/[id]` with slug lookup in
 ### Priority 2: Event Media & Content
 
 #### EVT-006: Media Upload API
-- [ ] Create `POST /api/upload/presigned` endpoint
-- [ ] Generate presigned URL for MinIO
-- [ ] Support image and video types
-- [ ] Validate file type and size limits
-- [ ] Create `POST /api/events/[id]/media` to save media reference
+- [x] Create `POST /api/upload/presigned` endpoint
+- [x] Generate presigned URL for MinIO
+- [x] Support image and video types
+- [x] Validate file type and size limits
+- [x] Create `POST /api/events/[id]/media` to save media reference
 
 **Files to create:**
 - `src/app/api/upload/presigned/route.ts`
 - `src/app/api/events/[id]/media/route.ts`
 
 #### EVT-007: Agenda Management API
-- [ ] Create `POST /api/events/[id]/agenda` endpoint
-- [ ] Create `PATCH /api/events/[id]/agenda/[itemId]` endpoint
-- [ ] Create `DELETE /api/events/[id]/agenda/[itemId]` endpoint
-- [ ] Support reordering
+- [x] Create `POST /api/events/[id]/agenda` endpoint
+- [x] Create `PATCH /api/events/[id]/agenda/[itemId]` endpoint
+- [x] Create `DELETE /api/events/[id]/agenda/[itemId]` endpoint
+- [x] Support reordering
 
 **Files to create:**
 - `src/app/api/events/[id]/agenda/route.ts`
 - `src/app/api/events/[id]/agenda/[itemId]/route.ts`
 
 #### EVT-008: Speakers Management API
-- [ ] Create `POST /api/events/[id]/speakers` endpoint
-- [ ] Create `PATCH /api/events/[id]/speakers/[speakerId]` endpoint
-- [ ] Create `DELETE /api/events/[id]/speakers/[speakerId]` endpoint
-- [ ] Handle speaker photo upload
+- [x] Create `POST /api/events/[id]/speakers` endpoint
+- [x] Create `PATCH /api/events/[id]/speakers/[speakerId]` endpoint
+- [x] Create `DELETE /api/events/[id]/speakers/[speakerId]` endpoint
+- [x] Handle speaker photo upload
 
 **Files to create:**
 - `src/app/api/events/[id]/speakers/route.ts`
@@ -248,11 +248,11 @@ Note: Implemented currently as `GET /api/events/[id]` with slug lookup in
 ### Priority 3: Public Event UI
 
 #### EVT-009: Event Listing Page
-- [ ] Create event listing page
-- [ ] Search bar with filters (category, date, location)
-- [ ] Event cards with image, title, date, location, price range
-- [ ] Pagination
-- [ ] Loading and empty states
+- [x] Create event listing page
+- [x] Search bar with filters (category, date, location)
+- [x] Event cards with image, title, date, location, price range
+- [x] Pagination
+- [x] Loading and empty states
 
 **Files to create:**
 - `src/app/(public)/events/page.tsx`
@@ -261,14 +261,14 @@ Note: Implemented currently as `GET /api/events/[id]` with slug lookup in
 - `src/components/events/EventList.tsx`
 
 #### EVT-010: Event Details Page
-- [ ] Create event details page
-- [ ] Hero with cover image
-- [ ] Event info (date, time, location with map)
-- [ ] Description (rich text rendering)
-- [ ] Agenda timeline
-- [ ] Speakers section
-- [ ] Ticket selection and purchase CTA
-- [ ] Share buttons
+- [x] Create event details page
+- [x] Hero with cover image
+- [x] Event info (date, time, location with map)
+- [x] Description (rich text rendering)
+- [x] Agenda timeline
+- [x] Speakers section
+- [x] Ticket selection and purchase CTA
+- [x] Share buttons
 
 **Files to create:**
 - `src/app/(public)/events/[slug]/page.tsx`
@@ -281,32 +281,32 @@ Note: Implemented currently as `GET /api/events/[id]` with slug lookup in
 ### Priority 4: Organizer Event Management UI
 
 #### EVT-011: Event Creation Form
-- [ ] Multi-step form or single page with sections
-- [ ] Title, description (rich text editor)
-- [ ] Date/time pickers with timezone
-- [ ] Location type toggle (physical/online/hybrid)
-- [ ] Address input with autocomplete
-- [ ] Cover image upload
-- [ ] Save as draft / Publish buttons
+- [x] Multi-step form or single page with sections
+- [x] Title, description (rich text editor)
+- [x] Date/time pickers with timezone
+- [x] Location type toggle (physical/online/hybrid)
+- [x] Address input with autocomplete
+- [x] Cover image upload
+- [x] Save as draft / Publish buttons
 
 **Files to create:**
 - `src/app/(dashboard)/dashboard/events/new/page.tsx`
 - `src/components/events/EventForm.tsx`
 
 #### EVT-012: Event Edit Page
-- [ ] Load existing event data
-- [ ] Same form as creation
-- [ ] Publish/Unpublish toggle
-- [ ] Cancel event button with confirmation
+- [x] Load existing event data
+- [x] Same form as creation
+- [x] Publish/Unpublish toggle
+- [x] Cancel event button with confirmation
 
 **Files to create:**
 - `src/app/(dashboard)/dashboard/events/[id]/edit/page.tsx`
 
 #### EVT-013: Agenda & Speakers Editor
-- [ ] Inline agenda item editor
-- [ ] Drag-and-drop reordering
-- [ ] Speaker management panel
-- [ ] Link speakers to agenda items
+- [x] Inline agenda item editor
+- [x] Drag-and-drop reordering
+- [x] Speaker management panel
+- [x] Link speakers to agenda items
 
 **Files to create:**
 - `src/components/events/AgendaEditor.tsx`

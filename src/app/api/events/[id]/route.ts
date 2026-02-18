@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
 import { updateEventSchema } from '@/lib/validations/event'
@@ -6,6 +7,10 @@ import { updateEventSchema } from '@/lib/validations/event'
 type RouteContext = {
   params: Promise<{ id: string }>
 }
+
+const updateEventApiSchema = updateEventSchema.extend({
+  status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
+})
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
@@ -39,7 +44,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const body = await request.json()
-    const parsed = updateEventSchema.safeParse(body)
+    const parsed = updateEventApiSchema.safeParse(body)
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -51,7 +56,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       )
     }
 
-    const { categoryIds, ...input } = parsed.data
+    const { categoryIds, status, ...input } = parsed.data
 
     const nextStartDate = input.startDate ? new Date(input.startDate) : existingEvent.startDate
     const nextEndDate = input.endDate ? new Date(input.endDate) : existingEvent.endDate
@@ -97,6 +102,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           coverImage: input.coverImage,
           visibility: input.visibility,
           cancellationDeadlineHours: input.cancellationDeadlineHours,
+          status,
+          publishedAt:
+            status === 'PUBLISHED'
+              ? existingEvent.publishedAt || new Date()
+              : status === 'DRAFT'
+                ? null
+                : undefined,
         },
       })
 

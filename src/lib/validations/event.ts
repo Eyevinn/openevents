@@ -24,7 +24,13 @@ export const createEventSchema = z.object({
   path: ['endDate'],
 })
 
-export const updateEventSchema = createEventSchema.partial()
+export const updateEventSchema = createEventSchema.partial().refine((data) => {
+  if (!data.startDate || !data.endDate) return true
+  return new Date(data.endDate) > new Date(data.startDate)
+}, {
+  message: 'End date must be after start date',
+  path: ['endDate'],
+})
 
 export const publishEventSchema = z.object({
   eventId: z.string().cuid(),
