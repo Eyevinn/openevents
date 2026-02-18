@@ -164,47 +164,50 @@ These tasks have been completed during initial scaffolding:
 ### Priority 1: Event CRUD APIs
 
 #### EVT-001: Create Event API
-- [ ] Create `POST /api/events` endpoint (Organizer only)
-- [ ] Generate unique slug from title
-- [ ] Validate all fields with Zod
-- [ ] Set initial status as DRAFT
-- [ ] Return created event
+- [x] Create `POST /api/events` endpoint (Organizer only)
+- [x] Generate unique slug from title
+- [x] Validate all fields with Zod
+- [x] Set initial status as DRAFT
+- [x] Return created event
 
 **Files to create:**
 - `src/app/api/events/route.ts`
 
 #### EVT-002: Update Event API
-- [ ] Create `PATCH /api/events/[id]` endpoint
-- [ ] Verify ownership (organizer's event only)
-- [ ] Validate fields
-- [ ] Prevent updates to cancelled/completed events
+- [x] Create `PATCH /api/events/[id]` endpoint
+- [x] Verify ownership (organizer's event only)
+- [x] Validate fields
+- [x] Prevent updates to cancelled/completed events
 
 **Files to create:**
 - `src/app/api/events/[id]/route.ts`
 
 #### EVT-003: Publish/Cancel Event API
-- [ ] Create `POST /api/events/[id]/publish` endpoint
-- [ ] Validate event has required fields before publishing
-- [ ] Create `POST /api/events/[id]/cancel` endpoint
-- [ ] Notify ticket holders on cancellation (queue email job)
+- [x] Create `POST /api/events/[id]/publish` endpoint
+- [x] Validate event has required fields before publishing
+- [x] Create `POST /api/events/[id]/cancel` endpoint
+- [x] Notify ticket holders on cancellation (queue email job)
 
 **Files to create:**
 - `src/app/api/events/[id]/publish/route.ts`
 - `src/app/api/events/[id]/cancel/route.ts`
 
 #### EVT-004: List Events API (Public)
-- [ ] Create `GET /api/events` endpoint
-- [ ] Filter by: category, date range, location, search query
-- [ ] Pagination support
-- [ ] Return only PUBLIC + PUBLISHED events
+- [x] Create `GET /api/events` endpoint
+- [x] Filter by: category, date range, location, search query
+- [x] Pagination support
+- [x] Return only PUBLIC + PUBLISHED events
 
 **Files to modify:**
 - `src/app/api/events/route.ts`
 
 #### EVT-005: Get Event Details API (Public)
-- [ ] Create `GET /api/events/[slug]` endpoint
-- [ ] Include: organizer, agenda, speakers, ticket types
-- [ ] Check visibility (private = only with direct link)
+- [~] Create `GET /api/events/[slug]` endpoint
+- [x] Include: organizer, agenda, speakers, ticket types
+- [x] Check visibility (private = only with direct link)
+
+Note: Implemented currently as `GET /api/events/[id]` with slug lookup in
+`src/app/api/events/[id]/route.ts` due Next.js dynamic route segment constraints.
 
 **Files to create:**
 - `src/app/api/events/[slug]/route.ts`
