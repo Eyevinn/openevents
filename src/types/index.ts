@@ -92,7 +92,7 @@ export type EventForOrganizer = Prisma.EventGetPayload<{
 // Ticket Types
 // ============================================================================
 
-export type TicketTypeWithAvailability = Prisma.TicketTypeGetPayload<{}> & {
+export type TicketTypeWithAvailability = Prisma.TicketTypeGetPayload<Record<string, never>> & {
   remainingCapacity: number | null
   isAvailable: boolean
 }
