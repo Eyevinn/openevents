@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils'
+import { DownloadTicketsButton } from '@/components/tickets/DownloadTicketsButton'
 
 interface TicketDisplayProps {
   order: {
@@ -76,7 +77,7 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
             <span className="font-medium text-gray-900">Total:</span> {order.totalAmount.toString()}{' '}
             {order.currency}
           </p>
-          <div className="pt-3">
+          <div className="flex flex-wrap items-center gap-3 pt-3">
             <a
               href={calendarUrl}
               target="_blank"
@@ -85,6 +86,7 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
             >
               Add to Calendar
             </a>
+            <DownloadTicketsButton />
           </div>
         </CardContent>
       </Card>
