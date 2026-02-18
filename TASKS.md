@@ -442,7 +442,7 @@ These tasks have been completed during initial scaffolding:
 #### TKT-013: Order Confirmation Page
 - [x] Order details display
 - [x] Ticket codes / QR codes
-- [ ] Download tickets as PDF (stretch)
+- [x] Download tickets as PDF (stretch)
 - [x] Add to calendar links
 
 **Files to create:**
