@@ -6,6 +6,8 @@ import { AgendaEditor } from '@/components/events/AgendaEditor'
 import { SpeakerEditor } from '@/components/events/SpeakerEditor'
 import { EventStatusActions } from '@/components/events/EventStatusActions'
 
+export const dynamic = 'force-dynamic'
+
 type PageProps = {
   params: Promise<{ id: string }>
 }

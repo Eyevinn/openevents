@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db'
 import { EventFilters } from '@/components/events/EventFilters'
 import { EventList } from '@/components/events/EventList'
 
+export const dynamic = 'force-dynamic'
+
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }

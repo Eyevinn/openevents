@@ -7,6 +7,8 @@ import { EventAgenda } from '@/components/events/EventAgenda'
 import { EventSpeakers } from '@/components/events/EventSpeakers'
 import { LocationMap } from '@/components/events/LocationMap'
 
+export const dynamic = 'force-dynamic'
+
 type PageProps = {
   params: Promise<{ slug: string }>
 }

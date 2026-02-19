@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser, hasRole } from '@/lib/auth'
 import { CreateEventForm } from '@/components/events/CreateEventForm'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CreateEventPage() {
   const user = await getCurrentUser()
 
