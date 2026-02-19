@@ -34,34 +34,34 @@ These tasks have been completed during initial scaffolding:
 ### Priority 1: Core Authentication
 
 #### AUTH-001: Email/Password Registration API
-- [ ] Create `POST /api/auth/register` endpoint
-- [ ] Hash password with bcrypt
-- [ ] Create user in database with ATTENDEE role
-- [ ] Generate email verification token
-- [ ] Send verification email
-- [ ] Return appropriate success/error responses
+- [x] Create `POST /api/auth/register` endpoint
+- [x] Hash password with bcrypt
+- [x] Create user in database with ATTENDEE role
+- [x] Generate email verification token
+- [x] Send verification email
+- [x] Return appropriate success/error responses
 
 **Files to create/modify:**
 - `src/app/api/auth/register/route.ts`
 
 #### AUTH-002: Email Verification API
-- [ ] Create `GET /api/auth/verify-email` endpoint
-- [ ] Validate token from query parameter
-- [ ] Check token expiration (24 hours)
-- [ ] Update user's `emailVerified` field
-- [ ] Delete used token
-- [ ] Redirect to login with success message
+- [x] Create `GET /api/auth/verify-email` endpoint
+- [x] Validate token from query parameter
+- [x] Check token expiration (24 hours)
+- [x] Update user's `emailVerified` field
+- [x] Delete used token
+- [x] Redirect to login with success message
 
 **Files to create/modify:**
 - `src/app/api/auth/verify-email/route.ts`
 
 #### AUTH-003: Password Reset Flow
-- [ ] Create `POST /api/auth/forgot-password` endpoint
-- [ ] Generate password reset token (1 hour expiry)
-- [ ] Send reset email
-- [ ] Create `POST /api/auth/reset-password` endpoint
-- [ ] Validate token and update password
-- [ ] Invalidate all existing sessions (optional)
+- [x] Create `POST /api/auth/forgot-password` endpoint
+- [x] Generate password reset token (1 hour expiry)
+- [x] Send reset email
+- [x] Create `POST /api/auth/reset-password` endpoint
+- [x] Validate token and update password
+- [x] Invalidate all existing sessions (optional)
 
 **Files to create/modify:**
 - `src/app/api/auth/forgot-password/route.ts`
@@ -70,17 +70,17 @@ These tasks have been completed during initial scaffolding:
 ### Priority 2: OAuth Integration
 
 #### AUTH-004: Google OAuth
-- [ ] Configure Google OAuth in NextAuth
-- [ ] Handle auto-account creation on first login
-- [ ] Link accounts if email already exists
+- [x] Configure Google OAuth in NextAuth
+- [x] Handle auto-account creation on first login
+- [x] Link accounts if email already exists
 - [ ] Test login/logout flow
 
 **Files to modify:**
 - `src/lib/auth/config.ts` (already configured, needs testing)
 
 #### AUTH-005: GitHub OAuth
-- [ ] Configure GitHub OAuth in NextAuth
-- [ ] Handle auto-account creation
+- [x] Configure GitHub OAuth in NextAuth
+- [x] Handle auto-account creation
 - [ ] Test login/logout flow
 
 **Files to modify:**
@@ -89,41 +89,41 @@ These tasks have been completed during initial scaffolding:
 ### Priority 3: Auth UI Pages
 
 #### AUTH-006: Login Page
-- [ ] Create login form component
-- [ ] Email/password fields with validation
-- [ ] OAuth buttons (Google, GitHub)
-- [ ] "Forgot password" link
-- [ ] "Register" link
-- [ ] Error message display
-- [ ] Loading states
+- [x] Create login form component
+- [x] Email/password fields with validation
+- [x] OAuth buttons (Google, GitHub)
+- [x] "Forgot password" link
+- [x] "Register" link
+- [x] Error message display
+- [x] Loading states
 
 **Files to create:**
 - `src/app/(auth)/login/page.tsx`
 - `src/components/auth/LoginForm.tsx`
 
 #### AUTH-007: Registration Page
-- [ ] Create registration form component
-- [ ] All required fields with validation
-- [ ] Password strength indicator
-- [ ] Terms acceptance checkbox
-- [ ] Success message with email verification instructions
+- [x] Create registration form component
+- [x] All required fields with validation
+- [x] Password strength indicator
+- [x] Terms acceptance checkbox
+- [x] Success message with email verification instructions
 
 **Files to create:**
 - `src/app/(auth)/register/page.tsx`
 - `src/components/auth/RegisterForm.tsx`
 
 #### AUTH-008: Email Verification Page
-- [ ] Create verification pending page
-- [ ] Create verification success page
-- [ ] Resend verification email button
+- [x] Create verification pending page
+- [x] Create verification success page
+- [x] Resend verification email button
 
 **Files to create:**
 - `src/app/(auth)/verify-email/page.tsx`
 
 #### AUTH-009: Password Reset Pages
-- [ ] Create forgot password page (email input)
-- [ ] Create reset password page (new password form)
-- [ ] Success/error messaging
+- [x] Create forgot password page (email input)
+- [x] Create reset password page (new password form)
+- [x] Success/error messaging
 
 **Files to create:**
 - `src/app/(auth)/forgot-password/page.tsx`
@@ -132,11 +132,11 @@ These tasks have been completed during initial scaffolding:
 ### Priority 4: Role Management
 
 #### AUTH-010: Organizer Request API
-- [ ] Create `POST /api/users/request-organizer` endpoint
-- [ ] Store request with org name and description
-- [ ] Create `GET /api/admin/organizer-requests` endpoint (Admin only)
-- [ ] Create `POST /api/admin/organizer-requests/[id]/approve` endpoint
-- [ ] Create `POST /api/admin/organizer-requests/[id]/reject` endpoint
+- [x] Create `POST /api/users/request-organizer` endpoint
+- [x] Store request with org name and description
+- [x] Create `GET /api/admin/organizer-requests` endpoint (Admin only)
+- [x] Create `POST /api/admin/organizer-requests/[id]/approve` endpoint
+- [x] Create `POST /api/admin/organizer-requests/[id]/reject` endpoint
 - [ ] Send notification email on approval/rejection
 
 **Files to create:**
@@ -145,9 +145,9 @@ These tasks have been completed during initial scaffolding:
 - `src/app/api/admin/organizer-requests/[id]/route.ts`
 
 #### AUTH-011: User Profile API
-- [ ] Create `GET /api/users/me` endpoint
-- [ ] Create `PATCH /api/users/me` endpoint
-- [ ] Create `POST /api/users/me/change-password` endpoint
+- [x] Create `GET /api/users/me` endpoint
+- [x] Create `PATCH /api/users/me` endpoint
+- [x] Create `POST /api/users/me/change-password` endpoint
 - [ ] Handle profile image upload
 
 **Files to create:**
