@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const createTicketTypeSchema = z.object({
+const ticketTypeBaseSchema = z.object({
   eventId: z.string().cuid(),
   name: z.string().min(1, 'Name is required').max(100, 'Name is too long'),
   description: z.string().optional(),
@@ -13,7 +13,9 @@ export const createTicketTypeSchema = z.object({
   maxPerOrder: z.number().int().min(1).default(10),
   minPerOrder: z.number().int().min(1).default(1),
   sortOrder: z.number().default(0),
-}).refine((data) => {
+})
+
+export const createTicketTypeSchema = ticketTypeBaseSchema.refine((data) => {
   if (data.salesStartDate && data.salesEndDate) {
     return new Date(data.salesEndDate) > new Date(data.salesStartDate)
   }
@@ -23,9 +25,9 @@ export const createTicketTypeSchema = z.object({
   path: ['salesEndDate'],
 })
 
-export const updateTicketTypeSchema = createTicketTypeSchema.partial().omit({ eventId: true })
+export const updateTicketTypeSchema = ticketTypeBaseSchema.partial().omit({ eventId: true })
 
-export const createDiscountCodeSchema = z.object({
+const discountCodeBaseSchema = z.object({
   eventId: z.string().cuid(),
   code: z.string()
     .min(3, 'Code must be at least 3 characters')
@@ -38,7 +40,9 @@ export const createDiscountCodeSchema = z.object({
   validUntil: z.string().datetime().optional().nullable(),
   isActive: z.boolean().default(true),
   ticketTypeIds: z.array(z.string().cuid()).optional(), // Empty = applies to all
-}).refine((data) => {
+})
+
+export const createDiscountCodeSchema = discountCodeBaseSchema.refine((data) => {
   // For percentage, value must be between 0 and 100
   if (data.discountType === 'PERCENTAGE' && data.discountValue > 100) {
     return false
@@ -58,7 +62,7 @@ export const createDiscountCodeSchema = z.object({
   path: ['discountValue'],
 })
 
-export const updateDiscountCodeSchema = createDiscountCodeSchema.partial().omit({ eventId: true })
+export const updateDiscountCodeSchema = discountCodeBaseSchema.partial().omit({ eventId: true })
 
 export const validateDiscountCodeSchema = z.object({
   eventId: z.string().cuid(),
