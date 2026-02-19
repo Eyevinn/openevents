@@ -290,7 +290,9 @@ Note: Implemented currently as `GET /api/events/[id]` with slug lookup in
 - [x] Save as draft / Publish buttons
 
 **Files to create:**
-- `src/app/(dashboard)/dashboard/events/new/page.tsx`
+- `src/app/(public)/create-event/page.tsx`
+- `src/components/events/CreateEventForm.tsx`
+- `src/app/(dashboard)/dashboard/events/new/page.tsx` (redirects to `/create-event`)
 - `src/components/events/EventForm.tsx`
 
 #### EVT-012: Event Edit Page
@@ -627,8 +629,8 @@ These tasks can be picked up by any developer after core features are complete:
 These components can be created by any developer as needed:
 
 ### UI Components
-- [ ] Button component
-- [ ] Input component
+- [x] Button component
+- [x] Input component
 - [ ] Select component
 - [ ] Modal/Dialog component
 - [ ] Toast notifications
@@ -637,10 +639,10 @@ These components can be created by any developer as needed:
 - [ ] Error boundaries
 
 ### Layout Components
-- [ ] Main navigation header
-- [ ] Footer
+- [x] Main navigation header
+- [x] Footer
 - [ ] Dashboard sidebar
-- [ ] Mobile navigation
+- [x] Mobile navigation
 - [ ] Breadcrumbs
 
 ---
