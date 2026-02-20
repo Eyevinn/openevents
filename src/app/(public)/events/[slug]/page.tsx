@@ -63,7 +63,7 @@ export default async function EventDetailsPage({ params }: PageProps) {
   }
 
   const isOwnerOrAdmin =
-    Boolean(user) &&
+    user !== undefined &&
     hasRole(user.roles, ['ORGANIZER', 'SUPER_ADMIN']) &&
     (hasRole(user.roles, 'SUPER_ADMIN') || user.id === event.organizer.userId)
 

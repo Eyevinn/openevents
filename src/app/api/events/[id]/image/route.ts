@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (event.status !== 'PUBLISHED') {
       const user = await getCurrentUser()
       const canAccessDraft =
-        Boolean(user) &&
+        user !== undefined &&
         hasRole(user.roles, ['ORGANIZER', 'SUPER_ADMIN']) &&
         (hasRole(user.roles, 'SUPER_ADMIN') || event.organizer.userId === user.id)
 
