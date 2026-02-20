@@ -52,6 +52,7 @@ prisma/*.db-journal
 # IDE
 .idea
 .vscode
+.claude/
 *.swp
 *.swo
 
