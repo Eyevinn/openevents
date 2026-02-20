@@ -30,6 +30,7 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string
+    image?: string | null
     roles: Role[]
     emailVerified: Date | null
   }
@@ -100,18 +101,20 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id
+        token.image = user.image
         token.roles = user.roles
         token.emailVerified = user.emailVerified
       }
 
       // Handle session updates
       if (trigger === 'update' && session) {
-        // Re-fetch roles from database
+        // Re-fetch user data from database
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id },
           include: { roles: true },
         })
         if (dbUser) {
+          token.image = dbUser.image
           token.roles = dbUser.roles.map((r) => r.role)
         }
       }
@@ -121,6 +124,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (token) {
         session.user.id = token.id
+        session.user.image = token.image
         session.user.roles = token.roles
         session.user.emailVerified = token.emailVerified
       }
