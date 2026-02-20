@@ -157,31 +157,39 @@ export function RegisterForm() {
 
   return (
     <div className="space-y-0">
-      <div className="relative z-10 flex items-end gap-1 px-2">
+      <div className="relative z-10 -mb-px grid grid-cols-2 gap-1 px-2">
         <button
           type="button"
           onClick={() => setValue('role', 'ATTENDEE', { shouldValidate: true })}
-          className={`relative flex-1 rounded-t-[1.75rem] border px-6 text-left transition-all duration-200 ${
-            role === 'ATTENDEE'
-              ? 'z-20 -mb-px scale-[1.08] border-gray-300 border-b-white bg-white py-5 text-gray-900 shadow-[0_14px_30px_-16px_rgba(17,24,39,0.35)]'
-              : 'z-0 scale-[0.97] translate-y-2 border-gray-300 bg-gray-100 py-4 text-gray-500 hover:bg-gray-200'
-          }`}
+          className="relative h-[112px] w-full text-left"
         >
-          <p className="text-3xl font-semibold leading-tight tracking-tight">Attendee</p>
+          <div
+            className={`absolute inset-x-0 bottom-0 rounded-t-[1.75rem] border px-6 text-left transition-all duration-200 ${
+              role === 'ATTENDEE'
+                ? 'top-0 z-20 border-gray-300 border-b-white bg-white py-6 text-gray-900 shadow-[0_14px_30px_-16px_rgba(17,24,39,0.35)]'
+                : 'top-3 z-10 border-gray-300 bg-gray-100 py-4 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            <p className="text-3xl font-semibold leading-tight tracking-tight">Attendee</p>
+          </div>
         </button>
         <button
           type="button"
           onClick={() => setValue('role', 'ORGANIZER', { shouldValidate: true })}
-          className={`relative flex-1 rounded-t-[1.75rem] border px-6 text-left transition-all duration-200 ${
-            role === 'ORGANIZER'
-              ? 'z-20 -mb-px scale-[1.08] border-gray-300 border-b-white bg-white py-5 text-gray-900 shadow-[0_14px_30px_-16px_rgba(17,24,39,0.35)]'
-              : 'z-0 scale-[0.97] translate-y-2 border-gray-300 bg-gray-100 py-4 text-gray-500 hover:bg-gray-200'
-          }`}
+          className="relative h-[112px] w-full text-left"
         >
-          <p className="text-3xl font-semibold leading-tight tracking-tight">Organizer</p>
+          <div
+            className={`absolute inset-x-0 bottom-0 rounded-t-[1.75rem] border px-6 text-left transition-all duration-200 ${
+              role === 'ORGANIZER'
+                ? 'top-0 z-20 border-gray-300 border-b-white bg-white py-6 text-gray-900 shadow-[0_14px_30px_-16px_rgba(17,24,39,0.35)]'
+                : 'top-3 z-10 border-gray-300 bg-gray-100 py-4 text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            <p className="text-3xl font-semibold leading-tight tracking-tight">Organizer</p>
+          </div>
         </button>
       </div>
-      <Card className="relative z-20 rounded-[1.75rem] border border-t-0 border-gray-300 shadow-xl">
+      <Card className="relative z-20 rounded-t-none rounded-b-[1.75rem] border border-t-0 border-gray-300 shadow-xl">
       <CardHeader className="space-y-2 pt-9">
         <CardTitle className="text-3xl text-center font-semibold tracking-tight">Create your account</CardTitle>
         <CardDescription className="text-center text-base">

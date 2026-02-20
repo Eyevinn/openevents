@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { getSession, signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -65,9 +65,17 @@ export function LoginForm() {
       if (result?.error) {
         setError(result.error)
       } else {
-        // Get the callback URL or default to dashboard
-        const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
-        router.push(callbackUrl)
+        const callbackUrl = searchParams.get('callbackUrl')
+        if (callbackUrl) {
+          router.push(callbackUrl)
+          router.refresh()
+          return
+        }
+
+        const session = await getSession()
+        const roles = session?.user?.roles || []
+        const isOrganizerOrAdmin = roles.includes('ORGANIZER') || roles.includes('SUPER_ADMIN')
+        router.push(isOrganizerOrAdmin ? '/dashboard' : '/events')
         router.refresh()
       }
     } catch {

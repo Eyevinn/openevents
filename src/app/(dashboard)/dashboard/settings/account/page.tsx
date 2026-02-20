@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db'
@@ -84,7 +85,19 @@ export default async function AccountSettingsPage() {
       where: { id: currentUser.id },
     })
 
-    redirect('/')
+    const cookieStore = await cookies()
+    const sessionCookieNames = [
+      'next-auth.session-token',
+      '__Secure-next-auth.session-token',
+      'authjs.session-token',
+      '__Secure-authjs.session-token',
+    ]
+
+    for (const cookieName of sessionCookieNames) {
+      cookieStore.delete(cookieName)
+    }
+
+    redirect('/events')
   }
 
   return (

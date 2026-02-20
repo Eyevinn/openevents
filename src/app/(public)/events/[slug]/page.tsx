@@ -1,11 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { Heart, MapPin } from 'lucide-react'
 import { prisma } from '@/lib/db'
-import { EventHero } from '@/components/events/EventHero'
-import { EventInfo } from '@/components/events/EventInfo'
-import { EventAgenda } from '@/components/events/EventAgenda'
-import { EventSpeakers } from '@/components/events/EventSpeakers'
-import { LocationMap } from '@/components/events/LocationMap'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,19 +22,6 @@ export default async function EventDetailsPage({ params }: PageProps) {
           website: true,
         },
       },
-      agendaItems: {
-        include: {
-          speaker: {
-            select: {
-              name: true,
-            },
-          },
-        },
-        orderBy: [{ sortOrder: 'asc' }, { startTime: 'asc' }],
-      },
-      speakers: {
-        orderBy: { sortOrder: 'asc' },
-      },
       ticketTypes: {
         where: { isVisible: true },
         orderBy: { sortOrder: 'asc' },
@@ -50,82 +33,139 @@ export default async function EventDetailsPage({ params }: PageProps) {
     notFound()
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  const eventUrl = `${appUrl}/events/${event.slug}`
+  const locationText = [event.venue, event.address, event.city, event.state, event.country]
+    .filter(Boolean)
+    .join(', ')
+
+  const mapQuery = encodeURIComponent(locationText || event.title)
+  const mapEmbedUrl = `https://www.google.com/maps?q=${mapQuery}&output=embed`
+
+  const minPrice = event.ticketTypes.length
+    ? Math.min(...event.ticketTypes.map((ticket) => Number(ticket.price)))
+    : null
+  const currency = event.ticketTypes[0]?.currency || 'EUR'
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
-      <EventHero
-        title={event.title}
-        description={event.description}
-        coverImage={event.coverImage}
-        startDate={event.startDate}
-      />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          {event.descriptionHtml ? (
-            <section className="rounded-xl border border-gray-200 bg-white p-6">
-              <h2 className="text-xl font-semibold text-gray-900">About This Event</h2>
-              <div className="prose mt-3 max-w-none" dangerouslySetInnerHTML={{ __html: event.descriptionHtml }} />
-            </section>
-          ) : null}
-
-          <EventAgenda items={event.agendaItems} />
-          <EventSpeakers speakers={event.speakers} />
-          <LocationMap
-            locationType={event.locationType}
-            venue={event.venue}
-            address={event.address}
-            city={event.city}
-            state={event.state}
-            country={event.country}
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <section className="overflow-hidden rounded-2xl bg-gray-900">
+        {event.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={event.coverImage}
+            alt={event.title}
+            className="h-[260px] w-full object-cover sm:h-[380px]"
           />
+        ) : (
+          <div className="h-[260px] bg-gradient-to-r from-slate-700 to-slate-900 sm:h-[380px]" />
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 pb-5">
+          <div>
+            <h1 className="text-4xl font-semibold tracking-tight text-gray-900">{event.title}</h1>
+            <p className="mt-1 text-lg text-gray-600">By {event.organizer.orgName}</p>
+          </div>
+          <button
+            type="button"
+            className="rounded-full border border-gray-300 p-2 text-gray-700 transition hover:bg-gray-50"
+            aria-label="Save event"
+          >
+            <Heart className="h-6 w-6" />
+          </button>
         </div>
 
-        <aside className="space-y-6">
-          <EventInfo
-            startDate={event.startDate}
-            endDate={event.endDate}
-            timezone={event.timezone}
-            locationType={event.locationType}
-            venue={event.venue}
-            address={event.address}
-            city={event.city}
-            state={event.state}
-            country={event.country}
-            onlineUrl={event.onlineUrl}
-          />
+        <div className="grid grid-cols-1 gap-6 pt-5 md:grid-cols-[1fr_auto] md:items-center">
+          <div className="space-y-2">
+            {event.locationType !== 'ONLINE' ? (
+              <p className="flex items-start gap-2 text-gray-700">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{locationText || 'Location TBD'}</span>
+              </p>
+            ) : (
+              <p className="text-gray-700">Online event</p>
+            )}
+            <p className="text-gray-700">
+              {new Date(event.startDate).toLocaleDateString(undefined, {
+                month: 'long',
+                day: 'numeric',
+              })}{' '}
+              at{' '}
+              {new Date(event.startDate).toLocaleTimeString(undefined, {
+                hour: 'numeric',
+                minute: '2-digit',
+              })}{' '}
+              GMT+1
+            </p>
+          </div>
 
-          <section className="rounded-xl border border-gray-200 bg-white p-6">
-            <h2 className="text-xl font-semibold text-gray-900">Tickets</h2>
-            <div className="mt-4 space-y-3">
-              {event.ticketTypes.length === 0 ? (
-                <p className="text-sm text-gray-600">Ticket sales are not open yet.</p>
-              ) : (
-                event.ticketTypes.map((ticket) => (
-                  <div key={ticket.id} className="rounded-md border border-gray-100 p-3">
-                    <p className="font-medium text-gray-900">{ticket.name}</p>
-                    <p className="text-sm text-gray-600">{ticket.currency} {ticket.price.toFixed(2)}</p>
-                  </div>
-                ))
-              )}
-            </div>
-            <Link href={`/events/${event.slug}/checkout`} className="mt-4 inline-flex rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white">
-              Purchase Tickets
+          <div className="rounded-xl border border-gray-200 p-4">
+            <p className="text-lg font-medium text-gray-900">
+              {minPrice === null ? 'Free / unavailable' : `From ${currency} ${minPrice.toFixed(0)}`}
+            </p>
+            <p className="text-xs text-gray-500">
+              {new Date(event.startDate).toLocaleDateString(undefined, {
+                month: 'long',
+                day: 'numeric',
+              })}{' '}
+              at{' '}
+              {new Date(event.startDate).toLocaleTimeString(undefined, {
+                hour: 'numeric',
+                minute: '2-digit',
+              })}{' '}
+              GMT+1
+            </p>
+            <Link
+              href={`/events/${event.slug}/checkout`}
+              className="mt-3 inline-flex rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+            >
+              Get tickets
             </Link>
-          </section>
+          </div>
+        </div>
+      </section>
 
-          <section className="rounded-xl border border-gray-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-gray-900">Share</h2>
-            <div className="mt-3 flex flex-wrap gap-2 text-sm">
-              <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(eventUrl)}&text=${encodeURIComponent(event.title)}`} target="_blank" rel="noreferrer" className="rounded-md border border-gray-300 px-3 py-2 text-gray-700">X</a>
-              <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(eventUrl)}`} target="_blank" rel="noreferrer" className="rounded-md border border-gray-300 px-3 py-2 text-gray-700">Facebook</a>
-              <a href={`mailto:?subject=${encodeURIComponent(event.title)}&body=${encodeURIComponent(eventUrl)}`} className="rounded-md border border-gray-300 px-3 py-2 text-gray-700">Email</a>
-            </div>
-          </section>
-        </aside>
-      </div>
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
+        <h2 className="text-5xl font-semibold tracking-tight text-gray-900">Overview</h2>
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+          <div className="text-lg leading-8 text-gray-800">
+            {event.descriptionHtml ? (
+              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: event.descriptionHtml }} />
+            ) : (
+              <p>{event.description || 'Event details will be announced soon.'}</p>
+            )}
+          </div>
+
+          <div className="overflow-hidden rounded-xl border border-gray-200">
+            {event.locationType === 'ONLINE' ? (
+              <div className="flex h-[230px] items-center justify-center bg-gray-50 p-4 text-center text-sm text-gray-500">
+                Online event map preview not required.
+              </div>
+            ) : (
+              <iframe
+                title="Event location map"
+                src={mapEmbedUrl}
+                className="h-[230px] w-full"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl bg-gray-900">
+        {event.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={event.coverImage}
+            alt={`${event.title} visual`}
+            className="h-[220px] w-full object-cover sm:h-[360px]"
+          />
+        ) : (
+          <div className="h-[220px] bg-gradient-to-r from-cyan-700 via-indigo-700 to-sky-700 sm:h-[360px]" />
+        )}
+      </section>
     </div>
   )
 }

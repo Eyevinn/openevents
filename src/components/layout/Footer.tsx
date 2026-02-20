@@ -16,32 +16,8 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
-              Quick Links
-            </h3>
-            <ul className="mt-4 space-y-2">
-              <li>
-                <Link href="/events" className="hover:text-white">
-                  Browse Events
-                </Link>
-              </li>
-              <li>
-                <Link href="/register" className="hover:text-white">
-                  Create Account
-                </Link>
-              </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-white">
-                  Organizer Dashboard
-                </Link>
-              </li>
-            </ul>
-          </div>
-
           {/* Support */}
-          <div>
+          <div className="md:col-start-4 md:justify-self-end md:text-right">
             <h3 className="text-sm font-semibold text-white uppercase tracking-wider">
               Support
             </h3>

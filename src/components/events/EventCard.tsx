@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { EventStatus, EventVisibility, LocationType } from '@prisma/client'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 
 type EventCardProps = {
   event: {
@@ -47,30 +46,33 @@ function formatLocation(event: EventCardProps['event']) {
 
 export function EventCard({ event }: EventCardProps) {
   return (
-    <Card className="overflow-hidden">
-      <div className="h-44 w-full bg-gradient-to-r from-blue-500 to-indigo-600">
-        {event.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={event.coverImage} alt={event.title} className="h-full w-full object-cover" />
-        ) : null}
-      </div>
-      <CardHeader>
-        <CardTitle className="text-xl">{event.title}</CardTitle>
-        <p className="text-sm text-gray-600">by {event.organizer.orgName}</p>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm text-gray-700">
-        <p>{new Date(event.startDate).toLocaleString()}</p>
-        <p>{formatLocation(event)}</p>
-        <p>{getPriceRange(event.ticketTypes)}</p>
-      </CardContent>
-      <CardFooter className="justify-between gap-2">
-        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-          {event.visibility}
-        </span>
-        <Link href={`/events/${event.slug}`}>
-          <Button size="sm">View Event</Button>
-        </Link>
-      </CardFooter>
-    </Card>
+    <Link
+      href={`/events/${event.slug}`}
+      className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      aria-label={`View event: ${event.title}`}
+    >
+      <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
+        <div className="h-44 w-full bg-gradient-to-r from-blue-500 to-indigo-600">
+          {event.coverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={event.coverImage} alt={event.title} className="h-full w-full object-cover" />
+          ) : null}
+        </div>
+        <CardHeader>
+          <CardTitle className="text-xl">{event.title}</CardTitle>
+          <p className="text-sm text-gray-600">by {event.organizer.orgName}</p>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-gray-700">
+          <p>{new Date(event.startDate).toLocaleString()}</p>
+          <p>{formatLocation(event)}</p>
+          <p>{getPriceRange(event.ticketTypes)}</p>
+        </CardContent>
+        <CardFooter>
+          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+            {event.visibility}
+          </span>
+        </CardFooter>
+      </Card>
+    </Link>
   )
 }
