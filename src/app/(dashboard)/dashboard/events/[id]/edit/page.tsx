@@ -115,8 +115,6 @@ export default async function EditEventPage({ params }: PageProps) {
     .filter((speaker) => resolveEventPeopleRole(speaker.socialLinks) === 'SPONSOR')
     .map((speaker) => speaker.name)
     .join(', ')
-  const primaryTicketType = event.ticketTypes[0]
-
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-10">
       <h1 className="text-3xl font-bold text-gray-900">Edit Event</h1>
@@ -128,11 +126,13 @@ export default async function EditEventPage({ params }: PageProps) {
         initialData={{
           id: event.id,
           slug: event.slug,
-          ticketTypeId: primaryTicketType?.id || '',
-          ticketTypeName: primaryTicketType?.name || 'General Admission',
-          ticketPrice: primaryTicketType ? Number(primaryTicketType.price).toString() : '0',
-          ticketCurrency: primaryTicketType?.currency || 'SEK',
-          ticketCapacity: primaryTicketType?.maxCapacity ? String(primaryTicketType.maxCapacity) : '',
+          ticketTypes: event.ticketTypes.map((ticketType) => ({
+            id: ticketType.id,
+            name: ticketType.name,
+            price: Number(ticketType.price).toString(),
+            currency: ticketType.currency,
+            capacity: ticketType.maxCapacity ? String(ticketType.maxCapacity) : '',
+          })),
           title: event.title,
           description: event.description || event.descriptionHtml || '',
           descriptionHtml: event.descriptionHtml,

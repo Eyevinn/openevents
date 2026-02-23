@@ -17,10 +17,21 @@ import {
 
 type EventFormMode = 'create' | 'edit'
 type ImageTargetField = 'coverImage' | 'bottomImage'
+type TicketTypeFieldKey = 'name' | 'price' | 'currency' | 'capacity'
+type TicketTypeFieldErrors = Partial<Record<TicketTypeFieldKey, string>>
+
+type TicketTypeDraft = {
+  id?: string
+  name: string
+  price: string
+  currency: string
+  capacity: string
+}
 
 type EventFormData = {
   id?: string
   slug?: string
+  ticketTypes?: TicketTypeDraft[]
   ticketTypeId?: string
   ticketTypeName?: string
   ticketPrice?: string
@@ -63,13 +74,10 @@ type FieldKey =
   | 'endDate'
   | 'timezone'
   | 'venue'
+  | 'address'
   | 'city'
   | 'country'
   | 'onlineUrl'
-  | 'ticketTypeName'
-  | 'ticketPrice'
-  | 'ticketCurrency'
-  | 'ticketCapacity'
   | 'coverImage'
   | 'bottomImage'
 
@@ -83,6 +91,12 @@ type CropSession = {
 }
 
 const fallbackInitialData: EventFormData = {
+  ticketTypes: [{
+    name: 'General Admission',
+    price: '0',
+    currency: DEFAULT_CURRENCY,
+    capacity: '',
+  }],
   ticketTypeId: '',
   ticketTypeName: 'General Admission',
   ticketPrice: '0',
@@ -120,17 +134,16 @@ const fieldOrder: FieldKey[] = [
   'endDate',
   'timezone',
   'venue',
+  'address',
   'city',
   'country',
   'onlineUrl',
   'description',
-  'ticketTypeName',
-  'ticketPrice',
-  'ticketCurrency',
-  'ticketCapacity',
   'coverImage',
   'bottomImage',
 ]
+
+const ticketFieldOrder: TicketTypeFieldKey[] = ['name', 'price', 'currency', 'capacity']
 
 const commonTimezones = [
   'UTC',
@@ -163,6 +176,29 @@ function normalizeTicketCurrency(raw?: string) {
   return (raw || DEFAULT_CURRENCY).trim().toUpperCase()
 }
 
+function normalizeTicketDraft(ticket?: Partial<TicketTypeDraft>): TicketTypeDraft {
+  return {
+    id: ticket?.id,
+    name: ticket?.name || '',
+    price: ticket?.price || '0',
+    currency: normalizeTicketCurrency(ticket?.currency),
+    capacity: ticket?.capacity || '',
+  }
+}
+
+function hasAnyTicketInput(ticket: TicketTypeDraft) {
+  return (
+    Boolean(ticket.id) ||
+    Boolean(ticket.name.trim()) ||
+    Boolean(ticket.price.trim()) ||
+    Boolean(ticket.capacity.trim())
+  )
+}
+
+function createEmptyTicketType() {
+  return normalizeTicketDraft()
+}
+
 function parseFirstFieldError(details: unknown, key: string) {
   if (!details || typeof details !== 'object') return null
 
@@ -193,18 +229,74 @@ function parseApiValidationErrors(details: unknown): FieldErrors {
   return mapped
 }
 
-function focusFirstInvalidField(fieldErrors: FieldErrors) {
-  const first = fieldOrder.find((key) => Boolean(fieldErrors[key]))
-  if (!first) return
+function parsePublishIssueFieldErrors(details: unknown): FieldErrors {
+  if (!Array.isArray(details)) return {}
 
+  const fieldMap: Record<string, FieldKey> = {
+    Title: 'title',
+    Start: 'startDate',
+    End: 'endDate',
+    Timezone: 'timezone',
+    Venue: 'venue',
+    Address: 'address',
+    City: 'city',
+    Country: 'country',
+    'Online URL': 'onlineUrl',
+    Description: 'description',
+  }
+
+  const nextFieldErrors: FieldErrors = {}
+
+  for (const issue of details) {
+    if (!issue || typeof issue !== 'object') continue
+    const issueRecord = issue as Record<string, unknown>
+    const field = issueRecord.field
+    const message = issueRecord.message
+    if (typeof field !== 'string' || typeof message !== 'string') continue
+
+    const mappedField = fieldMap[field]
+    if (mappedField && !nextFieldErrors[mappedField]) {
+      nextFieldErrors[mappedField] = message
+    }
+  }
+
+  return nextFieldErrors
+}
+
+function focusFieldById(id: string) {
   requestAnimationFrame(() => {
-    const element = document.getElementById(first)
+    const element = document.getElementById(id)
     if (!element) return
     element.scrollIntoView({ behavior: 'smooth', block: 'center' })
     if (element instanceof HTMLInputElement || element instanceof HTMLSelectElement || element instanceof HTMLTextAreaElement) {
       element.focus()
     }
   })
+}
+
+function focusFirstInvalidField(fieldErrors: FieldErrors, ticketErrors: TicketTypeFieldErrors[]) {
+  const first = fieldOrder.find((key) => Boolean(fieldErrors[key]))
+  if (first) {
+    focusFieldById(first)
+    return
+  }
+
+  for (let index = 0; index < ticketErrors.length; index += 1) {
+    const rowErrors = ticketErrors[index]
+    const firstTicketField = ticketFieldOrder.find((key) => Boolean(rowErrors[key]))
+    if (firstTicketField) {
+      if (firstTicketField === 'name') {
+        focusFieldById(`ticketTypeName-${index}`)
+      } else if (firstTicketField === 'price') {
+        focusFieldById(`ticketPrice-${index}`)
+      } else if (firstTicketField === 'currency') {
+        focusFieldById(`ticketCurrency-${index}`)
+      } else {
+        focusFieldById(`ticketCapacity-${index}`)
+      }
+      return
+    }
+  }
 }
 
 function loadTimezoneOptions(initialTimeZone: string) {
@@ -286,10 +378,13 @@ function buildSnapshot(form: EventFormData) {
     country: form.country || '',
     postalCode: form.postalCode || '',
     onlineUrl: form.onlineUrl || '',
-    ticketTypeName: form.ticketTypeName || '',
-    ticketPrice: form.ticketPrice || '',
-    ticketCurrency: normalizeTicketCurrency(form.ticketCurrency),
-    ticketCapacity: form.ticketCapacity || '',
+    ticketTypes: (form.ticketTypes || []).map((ticket) => ({
+      id: ticket.id || '',
+      name: ticket.name.trim(),
+      price: ticket.price.trim(),
+      currency: normalizeTicketCurrency(ticket.currency),
+      capacity: ticket.capacity.trim(),
+    })),
     speakerNames: form.speakerNames || '',
     organizerNames: form.organizerNames || '',
     sponsorNames: form.sponsorNames || '',
@@ -315,14 +410,29 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     ? mergedInitialData.timezone
     : 'UTC'
 
+  const initialTicketTypes = useMemo(() => {
+    if (mergedInitialData.ticketTypes && mergedInitialData.ticketTypes.length > 0) {
+      return mergedInitialData.ticketTypes.map((ticket) => normalizeTicketDraft(ticket))
+    }
+
+    return [normalizeTicketDraft({
+      id: mergedInitialData.ticketTypeId,
+      name: mergedInitialData.ticketTypeName,
+      price: mergedInitialData.ticketPrice,
+      currency: mergedInitialData.ticketCurrency,
+      capacity: mergedInitialData.ticketCapacity,
+    })]
+  }, [mergedInitialData])
+
   const initialFormState = useMemo<EventFormData>(() => ({
     ...mergedInitialData,
     timezone: normalizedInitialTimezone,
     description: mergedInitialData.description || mergedInitialData.descriptionHtml || '',
     startDate: formatUtcInTimeZoneForInput(mergedInitialData.startDate, normalizedInitialTimezone),
     endDate: formatUtcInTimeZoneForInput(mergedInitialData.endDate, normalizedInitialTimezone),
+    ticketTypes: initialTicketTypes,
     ticketCurrency: normalizeTicketCurrency(mergedInitialData.ticketCurrency),
-  }), [mergedInitialData, normalizedInitialTimezone])
+  }), [initialTicketTypes, mergedInitialData, normalizedInitialTimezone])
 
   const initialSnapshotRef = useRef(buildSnapshot(initialFormState))
 
@@ -333,6 +443,9 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
   const [isPreparingCrop, setIsPreparingCrop] = useState<ImageTargetField | null>(null)
   const [isApplyingCrop, setIsApplyingCrop] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [ticketErrors, setTicketErrors] = useState<TicketTypeFieldErrors[]>(
+    initialTicketTypes.map(() => ({}))
+  )
   const [generalErrors, setGeneralErrors] = useState<string[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null)
@@ -355,6 +468,9 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     coverImage: null,
     bottomImage: null,
   })
+  const persistedTicketTypeIdsRef = useRef(
+    new Set(initialTicketTypes.map((ticket) => ticket.id).filter((ticketId): ticketId is string => Boolean(ticketId)))
+  )
 
   const timezoneOptions = useMemo(() => loadTimezoneOptions(normalizedInitialTimezone), [normalizedInitialTimezone])
 
@@ -372,6 +488,57 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     if (key in fieldErrors) {
       clearFieldError(key as FieldKey)
     }
+  }
+
+  const clearTicketError = (index: number, key: TicketTypeFieldKey) => {
+    setTicketErrors((current) => {
+      if (!current[index]?.[key]) return current
+      const next = current.map((errors) => ({ ...errors }))
+      delete next[index][key]
+      return next
+    })
+  }
+
+  const updateTicketTypeField = (index: number, key: TicketTypeFieldKey, value: string) => {
+    setForm((current) => {
+      const nextTicketTypes = [...(current.ticketTypes || [])]
+      if (!nextTicketTypes[index]) return current
+
+      nextTicketTypes[index] = {
+        ...nextTicketTypes[index],
+        [key]: key === 'currency' ? normalizeTicketCurrency(value) : value,
+      }
+
+      return {
+        ...current,
+        ticketTypes: nextTicketTypes,
+      }
+    })
+    clearTicketError(index, key)
+  }
+
+  const addTicketType = () => {
+    setForm((current) => ({
+      ...current,
+      ticketTypes: [...(current.ticketTypes || []), createEmptyTicketType()],
+    }))
+    setTicketErrors((current) => [...current, {}])
+    setSubmitError(null)
+  }
+
+  const removeTicketType = (index: number) => {
+    const ticket = form.ticketTypes?.[index]
+    if (!ticket) return
+
+    if (ticket.id && !window.confirm('Remove this ticket type?')) {
+      return
+    }
+
+    setForm((current) => ({
+      ...current,
+      ticketTypes: (current.ticketTypes || []).filter((_, ticketIndex) => ticketIndex !== index),
+    }))
+    setTicketErrors((current) => current.filter((_, ticketIndex) => ticketIndex !== index))
   }
 
   function cleanupObjectUrl(targetField: ImageTargetField) {
@@ -494,80 +661,117 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     updateField(targetField, publicUrl)
   }
 
-  async function upsertPrimaryTicketType(eventId: string, requireComplete: boolean) {
-    const ticketName = (form.ticketTypeName || '').trim()
-    const ticketPrice = parseTicketPrice(form.ticketPrice)
-    const normalizedCurrency = normalizeTicketCurrency(form.ticketCurrency)
-    const capacityRaw = (form.ticketCapacity || '').trim()
-    const maxCapacity = capacityRaw ? Number(capacityRaw) : null
+  function parseTicketValidationErrors(details: unknown, index: number): TicketTypeFieldErrors | null {
+    const nextErrors: TicketTypeFieldErrors = {}
+    const nameError = parseFirstFieldError(details, 'name')
+    const priceError = parseFirstFieldError(details, 'price')
+    const currencyError = parseFirstFieldError(details, 'currency')
+    const capacityError = parseFirstFieldError(details, 'maxCapacity')
 
-    if (requireComplete && !ticketName) {
-      throw new Error('Tickets -> Ticket Name: Enter a ticket name.')
-    }
+    if (nameError) nextErrors.name = nameError
+    if (priceError) nextErrors.price = priceError
+    if (currencyError) nextErrors.currency = currencyError
+    if (capacityError) nextErrors.capacity = capacityError
 
-    if (requireComplete && (ticketPrice === null || ticketPrice < 0)) {
-      throw new Error('Tickets -> Ticket Price: Enter a valid price (0 or greater).')
-    }
+    if (Object.keys(nextErrors).length === 0) return null
 
-    if (requireComplete && !isSupportedCurrency(normalizedCurrency)) {
-      throw new Error('Tickets -> Currency: Select a supported currency.')
-    }
-
-    if (!requireComplete) {
-      const hasAnyTicketInput =
-        Boolean(form.ticketTypeId) ||
-        Boolean(ticketName) ||
-        Boolean((form.ticketPrice || '').trim()) ||
-        Boolean((form.ticketCurrency || '').trim()) ||
-        Boolean(capacityRaw)
-
-      if (!hasAnyTicketInput) return
-      if (!ticketName || ticketPrice === null || !isSupportedCurrency(normalizedCurrency)) return
-    }
-
-    if (maxCapacity !== null && (!Number.isInteger(maxCapacity) || maxCapacity < 1)) {
-      throw new Error('Tickets -> Capacity: Enter a whole number greater than 0, or leave empty.')
-    }
-
-    const payload = {
-      name: ticketName,
-      price: ticketPrice,
-      currency: normalizedCurrency,
-      maxCapacity,
-      isVisible: true,
-      minPerOrder: 1,
-      maxPerOrder: 10,
-      sortOrder: 0,
-    }
-
-    const hasExistingTicketType = Boolean(form.ticketTypeId)
-    const endpoint = hasExistingTicketType
-      ? `/api/events/${eventId}/ticket-types/${form.ticketTypeId}`
-      : `/api/events/${eventId}/ticket-types`
-    const method = hasExistingTicketType ? 'PATCH' : 'POST'
-
-    const response = await fetch(endpoint, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    setTicketErrors((current) => {
+      const next = [...current]
+      next[index] = { ...(next[index] || {}), ...nextErrors }
+      return next
     })
 
-    const json = await response.json()
-    if (!response.ok) {
-      const currencyError = parseFirstFieldError(json?.details, 'currency')
-      if (currencyError) {
-        setFieldErrors((current) => ({ ...current, ticketCurrency: currencyError }))
+    return nextErrors
+  }
+
+  async function syncTicketTypes(eventId: string, action: 'save' | 'publish') {
+    const requireComplete = action === 'publish'
+    const ticketTypes = form.ticketTypes || []
+    const ticketTypeIdsInForm = new Set(
+      ticketTypes.map((ticket) => ticket.id).filter((ticketId): ticketId is string => Boolean(ticketId))
+    )
+    const nextPersistedIds = new Set(persistedTicketTypeIdsRef.current)
+    const idsToDelete = Array.from(persistedTicketTypeIdsRef.current).filter((id) => !ticketTypeIdsInForm.has(id))
+
+    for (const typeId of idsToDelete) {
+      const response = await fetch(`/api/events/${eventId}/ticket-types/${typeId}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) {
+        const json = await response.json()
+        throw new Error(json?.error || 'Failed to delete ticket type')
       }
-      throw new Error(json?.error || 'Failed to save ticket type')
+      nextPersistedIds.delete(typeId)
     }
 
-    if (!hasExistingTicketType && json?.ticketType?.id) {
-      updateField('ticketTypeId', json.ticketType.id)
+    const nextTicketTypes = [...ticketTypes]
+
+    for (let index = 0; index < ticketTypes.length; index += 1) {
+      const ticketType = ticketTypes[index]
+      const name = ticketType.name.trim()
+      const price = parseTicketPrice(ticketType.price)
+      const currency = normalizeTicketCurrency(ticketType.currency)
+      const capacityRaw = ticketType.capacity.trim()
+      const maxCapacity = capacityRaw ? Number(capacityRaw) : null
+      const isComplete =
+        Boolean(name) &&
+        price !== null &&
+        price >= 0 &&
+        isSupportedCurrency(currency) &&
+        (maxCapacity === null || (Number.isInteger(maxCapacity) && maxCapacity > 0))
+      const shouldPersist = requireComplete ? true : hasAnyTicketInput(ticketType) && isComplete
+
+      if (!shouldPersist) continue
+
+      const payload = {
+        name,
+        price,
+        currency,
+        maxCapacity,
+        isVisible: true,
+        minPerOrder: 1,
+        maxPerOrder: 10,
+        sortOrder: index,
+      }
+
+      const hasExistingTicketType = Boolean(ticketType.id)
+      const endpoint = hasExistingTicketType
+        ? `/api/events/${eventId}/ticket-types/${ticketType.id}`
+        : `/api/events/${eventId}/ticket-types`
+      const method = hasExistingTicketType ? 'PATCH' : 'POST'
+      const response = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      const json = await response.json()
+      if (!response.ok) {
+        parseTicketValidationErrors(json?.details, index)
+        throw new Error(json?.error || 'Failed to save ticket type')
+      }
+
+      if (!hasExistingTicketType && json?.ticketType?.id) {
+        nextTicketTypes[index] = {
+          ...nextTicketTypes[index],
+          id: json.ticketType.id as string,
+        }
+        nextPersistedIds.add(json.ticketType.id as string)
+      } else if (ticketType.id) {
+        nextPersistedIds.add(ticketType.id)
+      }
     }
+
+    persistedTicketTypeIdsRef.current = nextPersistedIds
+    setForm((current) => ({
+      ...current,
+      ticketTypes: nextTicketTypes,
+    }))
   }
 
   function validate(action: 'save' | 'publish') {
     const nextFieldErrors: FieldErrors = {}
+    const nextTicketErrors: TicketTypeFieldErrors[] = (form.ticketTypes || []).map(() => ({}))
     const nextGeneralErrors: string[] = []
     const requireComplete = action === 'publish'
 
@@ -601,6 +805,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
     if (requireComplete && form.locationType !== 'ONLINE') {
       if (!form.venue?.trim()) nextFieldErrors.venue = 'Enter venue.'
+      if (!form.address?.trim()) nextFieldErrors.address = 'Enter address.'
       if (!form.city?.trim()) nextFieldErrors.city = 'Enter city.'
       if (!form.country?.trim()) nextFieldErrors.country = 'Enter country.'
     }
@@ -617,38 +822,74 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       nextFieldErrors.description = 'Add an event description.'
     }
 
-    const ticketPrice = parseTicketPrice(form.ticketPrice)
-    const normalizedCurrency = normalizeTicketCurrency(form.ticketCurrency)
-    const hasAnyTicketInput =
-      Boolean(form.ticketTypeId) ||
-      Boolean((form.ticketTypeName || '').trim()) ||
-      Boolean((form.ticketPrice || '').trim() && form.ticketPrice !== '0') ||
-      Boolean((form.ticketCapacity || '').trim())
+    const ticketTypes = form.ticketTypes || []
+    const seenTicketNames = new Map<string, number[]>()
+    let hasPublishableTicketType = false
 
-    if (requireComplete || hasAnyTicketInput) {
-      if (!form.ticketTypeName?.trim()) nextFieldErrors.ticketTypeName = 'Enter ticket name.'
-      if (ticketPrice === null || ticketPrice < 0) nextFieldErrors.ticketPrice = 'Enter a valid price (0 or greater).'
-      if (!isSupportedCurrency(normalizedCurrency)) nextFieldErrors.ticketCurrency = 'Select a supported currency.'
-    }
+    for (let index = 0; index < ticketTypes.length; index += 1) {
+      const ticket = ticketTypes[index]
+      const rowErrors = nextTicketErrors[index]
+      const name = ticket.name.trim()
+      const price = parseTicketPrice(ticket.price)
+      const currency = normalizeTicketCurrency(ticket.currency)
+      const capacityRaw = ticket.capacity.trim()
+      const maxCapacity = capacityRaw ? Number(capacityRaw) : null
+      const hasInput = hasAnyTicketInput(ticket)
 
-    const capacityRaw = (form.ticketCapacity || '').trim()
-    if (capacityRaw && (requireComplete || hasAnyTicketInput)) {
-      const maxCapacity = Number(capacityRaw)
-      if (!Number.isInteger(maxCapacity) || maxCapacity < 1) {
-        nextFieldErrors.ticketCapacity = 'Enter a whole number greater than 0 or leave empty.'
+      if (!requireComplete && !hasInput) {
+        continue
+      }
+
+      if (!name) rowErrors.name = 'Enter ticket name.'
+      if (price === null || price < 0) rowErrors.price = 'Enter a valid price (0 or greater).'
+      if (!isSupportedCurrency(currency)) rowErrors.currency = 'Select a supported currency.'
+      if (maxCapacity !== null && (!Number.isInteger(maxCapacity) || maxCapacity < 1)) {
+        rowErrors.capacity = 'Enter a whole number greater than 0 or leave empty.'
+      }
+
+      if (name) {
+        const normalizedName = name.toLowerCase()
+        const existingIndexes = seenTicketNames.get(normalizedName) || []
+        seenTicketNames.set(normalizedName, [...existingIndexes, index])
+      }
+
+      if (Object.keys(rowErrors).length === 0 && hasInput) {
+        hasPublishableTicketType = true
       }
     }
+
+    for (const duplicateIndexes of seenTicketNames.values()) {
+      if (duplicateIndexes.length < 2) continue
+      for (const index of duplicateIndexes) {
+        nextTicketErrors[index].name = 'Ticket names must be unique.'
+      }
+    }
+
+    if (requireComplete && ticketTypes.length < 1) {
+      nextGeneralErrors.push('Add at least one ticket type before publishing.')
+    }
+
+    if (requireComplete && ticketTypes.length > 0 && !hasPublishableTicketType) {
+      nextGeneralErrors.push('Fix ticket type details before publishing.')
+    }
+
+    const hasTicketErrors = nextTicketErrors.some((row) => Object.keys(row).length > 0)
 
     if (action === 'publish' && Object.keys(nextFieldErrors).length > 0) {
       nextGeneralErrors.push('Cannot publish yet. Fix the highlighted fields.')
     }
 
-    if (action === 'save' && Object.keys(nextFieldErrors).length > 0) {
+    if (action === 'save' && (Object.keys(nextFieldErrors).length > 0 || hasTicketErrors)) {
       nextGeneralErrors.push('Please fix the highlighted fields before saving.')
+    }
+
+    if (action === 'publish' && hasTicketErrors) {
+      nextGeneralErrors.push('Cannot publish yet. Fix ticket type fields.')
     }
 
     return {
       fieldErrors: nextFieldErrors,
+      ticketErrors: nextTicketErrors,
       generalErrors: nextGeneralErrors,
       startUtc,
       endUtc,
@@ -796,10 +1037,15 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
     const validationResult = validate(action)
     setFieldErrors(validationResult.fieldErrors)
+    setTicketErrors(validationResult.ticketErrors)
 
-    if (Object.keys(validationResult.fieldErrors).length > 0) {
+    const hasTicketErrors = validationResult.ticketErrors.some((row) => Object.keys(row).length > 0)
+    const hasFieldErrors = Object.keys(validationResult.fieldErrors).length > 0
+    const shouldBlockSubmit = hasFieldErrors || hasTicketErrors || (action === 'publish' && validationResult.generalErrors.length > 0)
+
+    if (shouldBlockSubmit) {
       setGeneralErrors(validationResult.generalErrors)
-      focusFirstInvalidField(validationResult.fieldErrors)
+      focusFirstInvalidField(validationResult.fieldErrors, validationResult.ticketErrors)
       return
     }
 
@@ -821,7 +1067,6 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         endDate: endUtc,
         description: form.description || '',
         descriptionHtml: undefined,
-        ticketCurrency: normalizeTicketCurrency(form.ticketCurrency),
         onlineUrl: form.onlineUrl || null,
         coverImage: form.coverImage || null,
         bottomImage: form.bottomImage || null,
@@ -829,6 +1074,12 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         organizerNames: parseNameList(form.organizerNames),
         sponsorNames: parseNameList(form.sponsorNames),
         categoryIds: form.categoryIds,
+        ticketTypes: undefined,
+        ticketTypeId: undefined,
+        ticketTypeName: undefined,
+        ticketPrice: undefined,
+        ticketCurrency: undefined,
+        ticketCapacity: undefined,
       }
 
       const endpoint = mode === 'create' ? '/api/events' : `/api/events/${form.id}`
@@ -845,7 +1096,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         const apiFieldErrors = parseApiValidationErrors(eventJson?.details)
         if (Object.keys(apiFieldErrors).length > 0) {
           setFieldErrors(apiFieldErrors)
-          focusFirstInvalidField(apiFieldErrors)
+          focusFirstInvalidField(apiFieldErrors, [])
         }
 
         throw new Error(eventJson?.error || 'Failed to save event')
@@ -855,7 +1106,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       const eventSlug = (eventJson?.data?.slug as string | undefined) || form.slug
 
       if (eventId) {
-        await upsertPrimaryTicketType(eventId, action === 'publish')
+        await syncTicketTypes(eventId, action)
       }
 
       if (action === 'publish' && eventId) {
@@ -865,6 +1116,11 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
         const publishJson = await publishRes.json()
         if (!publishRes.ok) {
+          const publishFieldErrors = parsePublishIssueFieldErrors(publishJson?.details)
+          if (Object.keys(publishFieldErrors).length > 0) {
+            setFieldErrors((current) => ({ ...current, ...publishFieldErrors }))
+            focusFirstInvalidField(publishFieldErrors, [])
+          }
           throw new Error(publishJson?.error || 'Failed to publish event')
         }
       }
@@ -945,11 +1201,6 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       : null
   const bannerImageSrc = bannerPreviewSrc || remoteBannerPreviewSrc || form.coverImage || null
   const bottomImageSrc = bottomPreviewSrc || remoteBottomPreviewSrc || form.bottomImage || null
-
-  const legacyTicketCurrency = (() => {
-    const current = normalizeTicketCurrency(form.ticketCurrency)
-    return current && !isSupportedCurrency(current) ? current : null
-  })()
 
   const canEditCoverImage = Boolean(bannerImageSrc || editableImageFiles.coverImage || originalImageFiles.coverImage)
   const canEditBottomImage = Boolean(bottomImageSrc || editableImageFiles.bottomImage || originalImageFiles.bottomImage)
@@ -1076,8 +1327,13 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                 <Input id="venue" value={form.venue || ''} error={fieldErrors.venue} onChange={(e) => updateField('venue', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="address">Address</Label>
-                <Input id="address" value={form.address || ''} onChange={(e) => updateField('address', e.target.value)} />
+                <Label htmlFor="address" required>Address</Label>
+                <Input
+                  id="address"
+                  value={form.address || ''}
+                  error={fieldErrors.address}
+                  onChange={(e) => updateField('address', e.target.value)}
+                />
               </div>
               <div>
                 <Label htmlFor="city" required>City</Label>
@@ -1167,64 +1423,98 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">Tickets</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="md:col-span-2">
-            <Label htmlFor="ticketTypeName" required>Ticket Name</Label>
-            <Input
-              id="ticketTypeName"
-              value={form.ticketTypeName || ''}
-              error={fieldErrors.ticketTypeName}
-              onChange={(e) => updateField('ticketTypeName', e.target.value)}
-              placeholder="General Admission"
-            />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="text-3xl font-semibold text-gray-900">Ticket Types</h3>
+          <Button type="button" variant="outline" onClick={addTicketType}>
+            + Add ticket type
+          </Button>
+        </div>
+
+        {(form.ticketTypes || []).length < 1 ? (
+          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
+            No ticket types yet. Add at least one before publishing.
           </div>
-          <div>
-            <Label htmlFor="ticketPrice" required>Ticket Price</Label>
-            <Input
-              id="ticketPrice"
-              type="number"
-              min={0}
-              step="0.01"
-              value={form.ticketPrice || ''}
-              error={fieldErrors.ticketPrice}
-              onChange={(e) => updateField('ticketPrice', e.target.value)}
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <Label htmlFor="ticketCurrency" required>Currency</Label>
-            <select
-              id="ticketCurrency"
-              className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm"
-              value={legacyTicketCurrency || form.ticketCurrency || DEFAULT_CURRENCY}
-              onChange={(e) => updateField('ticketCurrency', normalizeTicketCurrency(e.target.value))}
-            >
-              {legacyTicketCurrency ? (
-                <option value={legacyTicketCurrency}>{legacyTicketCurrency} (legacy unsupported)</option>
-              ) : null}
-              {SUPPORTED_CURRENCIES.map((currency) => (
-                <option key={currency} value={currency}>{currency}</option>
-              ))}
-            </select>
-            {legacyTicketCurrency ? (
-              <p className="mt-1 text-sm text-amber-700">Select a supported currency before publishing.</p>
-            ) : null}
-            {fieldErrors.ticketCurrency ? <p className="mt-1 text-sm text-red-600">{fieldErrors.ticketCurrency}</p> : null}
-          </div>
-          <div>
-            <Label htmlFor="ticketCapacity">Capacity (optional)</Label>
-            <Input
-              id="ticketCapacity"
-              type="number"
-              min={1}
-              step={1}
-              value={form.ticketCapacity || ''}
-              error={fieldErrors.ticketCapacity}
-              onChange={(e) => updateField('ticketCapacity', e.target.value)}
-              placeholder="Leave empty for unlimited"
-            />
-          </div>
+        ) : null}
+
+        <div className="space-y-4">
+          {(form.ticketTypes || []).map((ticketType, index) => {
+            const rowErrors = ticketErrors[index] || {}
+            const normalizedCurrency = normalizeTicketCurrency(ticketType.currency)
+            const legacyCurrency = normalizedCurrency && !isSupportedCurrency(normalizedCurrency)
+              ? normalizedCurrency
+              : null
+
+            return (
+              <div key={ticketType.id || `new-ticket-type-${index}`} className="rounded-lg border border-gray-200 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-800">Ticket Type {index + 1}</p>
+                  <Button type="button" variant="outline" onClick={() => removeTicketType(index)}>
+                    Remove
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <div className="md:col-span-2">
+                    <Label htmlFor={`ticketTypeName-${index}`} required>Ticket Name</Label>
+                    <Input
+                      id={`ticketTypeName-${index}`}
+                      value={ticketType.name}
+                      error={rowErrors.name}
+                      onChange={(event) => updateTicketTypeField(index, 'name', event.target.value)}
+                      placeholder="General Admission"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`ticketPrice-${index}`} required>Ticket Price</Label>
+                    <Input
+                      id={`ticketPrice-${index}`}
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={ticketType.price}
+                      error={rowErrors.price}
+                      onChange={(event) => updateTicketTypeField(index, 'price', event.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={`ticketCurrency-${index}`} required>Currency</Label>
+                    <select
+                      id={`ticketCurrency-${index}`}
+                      className={`h-10 w-full rounded-md border px-3 text-sm ${
+                        rowErrors.currency ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      value={legacyCurrency || normalizedCurrency}
+                      onChange={(event) => updateTicketTypeField(index, 'currency', event.target.value)}
+                    >
+                      {legacyCurrency ? (
+                        <option value={legacyCurrency}>{legacyCurrency} (legacy unsupported)</option>
+                      ) : null}
+                      {SUPPORTED_CURRENCIES.map((currency) => (
+                        <option key={currency} value={currency}>{currency}</option>
+                      ))}
+                    </select>
+                    {legacyCurrency ? (
+                      <p className="mt-1 text-sm text-amber-700">Select a supported currency before publishing.</p>
+                    ) : null}
+                    {rowErrors.currency ? <p className="mt-1 text-sm text-red-600">{rowErrors.currency}</p> : null}
+                  </div>
+                  <div>
+                    <Label htmlFor={`ticketCapacity-${index}`}>Capacity (optional)</Label>
+                    <Input
+                      id={`ticketCapacity-${index}`}
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={ticketType.capacity}
+                      error={rowErrors.capacity}
+                      onChange={(event) => updateTicketTypeField(index, 'capacity', event.target.value)}
+                      placeholder="Leave empty for unlimited"
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </section>
 
