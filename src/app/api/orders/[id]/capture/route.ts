@@ -3,6 +3,7 @@ import { Prisma, PaymentMethod } from '@prisma/client'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendOrderConfirmationEmail } from '@/lib/email'
+import { canAccessOrder } from '@/lib/orders/authorization'
 import { capturePayment, getPaymentStatus } from '@/lib/payments'
 import { generateTicketCreateInput, lockTicketTypes } from '@/lib/orders'
 import { expirePendingOrderIfNeeded } from '@/lib/orders/expirePendingOrder'
@@ -44,6 +45,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
             city: true,
             country: true,
             onlineUrl: true,
+            organizer: {
+              select: {
+                userId: true,
+              },
+            },
           },
         },
         items: {
@@ -63,10 +69,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.redirect(`${APP_URL}/checkout-error?error=order_not_found`)
     }
 
-    if (order.userId !== user.id) {
+    const canManageOrder = canAccessOrder({
+      orderUserId: order.userId,
+      organizerUserId: order.event.organizer.userId,
+      requesterUserId: user.id,
+      requesterRoles: user.roles,
+    })
+    if (!canManageOrder) {
       console.error('[Capture] Forbidden order capture attempt:', {
         orderId: order.id,
         orderUserId: order.userId,
+        organizerUserId: order.event.organizer.userId,
         requesterUserId: user.id,
       })
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

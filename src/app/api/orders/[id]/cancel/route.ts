@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
+import { canAccessOrder } from '@/lib/orders/authorization'
 import { lockTicketTypes } from '@/lib/orders'
 import { isCancellationDeadlinePassed } from '@/lib/utils'
 
@@ -20,9 +21,10 @@ const cancelOrderInputSchema = z.object({
  * Handle PayPal cancellation redirect
  * PayPal redirects here when user cancels the payment
  */
-export async function GET(request: NextRequest, context: RouteContext) {
+export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const { id: orderId } = await context.params
+    const user = await requireAuth()
 
     // Find the order
     const order = await prisma.order.findUnique({
@@ -31,6 +33,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
         event: {
           select: {
             slug: true,
+            organizer: {
+              select: {
+                userId: true,
+              },
+            },
           },
         },
         items: {
@@ -44,6 +51,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (!order) {
       return NextResponse.redirect(`${APP_URL}?error=order_not_found`)
+    }
+
+    const authorized = canAccessOrder({
+      orderUserId: order.userId,
+      organizerUserId: order.event.organizer.userId,
+      requesterUserId: user.id,
+      requesterRoles: user.roles,
+    })
+    if (!authorized) {
+      return NextResponse.redirect(`${APP_URL}/checkout-error?error=forbidden`)
     }
 
     // If already paid or cancelled, redirect appropriately
@@ -100,6 +117,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true`
     )
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.redirect(`${APP_URL}/checkout-error?error=unauthorized`)
+    }
+
     console.error('[PayPal Cancel] Failed to cancel order:', error)
     return NextResponse.redirect(`${APP_URL}?error=cancel_failed`)
   }
@@ -146,7 +167,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    const canManageOrder = order.userId === user.id || order.event.organizer.userId === user.id
+    const canManageOrder = canAccessOrder({
+      orderUserId: order.userId,
+      organizerUserId: order.event.organizer.userId,
+      requesterUserId: user.id,
+      requesterRoles: user.roles,
+    })
     if (!canManageOrder) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }

@@ -5,6 +5,7 @@ import { getCurrentUser, hasRole } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { EventNoticeToast } from '@/components/events/EventNoticeToast'
 import { DEFAULT_CURRENCY } from '@/lib/constants/currencies'
+import { CHECKOUT_UNAVAILABLE_NOTICE } from '@/lib/orders/checkoutAvailability'
 import { isValidTimeZone } from '@/lib/timezone'
 import { getLocale, getTranslations } from 'next-intl/server'
 
@@ -111,6 +112,14 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
     : notice === 'updated'
       ? t('noticeUpdated')
       : null
+  const checkoutUnavailableMessage =
+    notice === CHECKOUT_UNAVAILABLE_NOTICE.EVENT_NOT_PUBLISHED
+      ? t('checkoutUnavailableNotPublished')
+      : notice === CHECKOUT_UNAVAILABLE_NOTICE.EVENT_STARTED
+        ? t('checkoutUnavailableStarted')
+        : notice === CHECKOUT_UNAVAILABLE_NOTICE.NO_PURCHASABLE_TICKETS
+          ? t('checkoutUnavailableNoTickets')
+          : null
 
   type PersonCard = { id: string; name: string; title: string | null; photo: string | null; organization: string | null }
   const speakers: PersonCard[] = event.speakers.map((person) => ({
@@ -127,6 +136,14 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 sm:px-6 lg:px-8">
       <EventNoticeToast message={noticeMessage} />
+      {checkoutUnavailableMessage && (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          {checkoutUnavailableMessage}
+        </div>
+      )}
       <section className="relative overflow-hidden rounded-xl bg-gray-900">
         {event.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element

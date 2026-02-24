@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendOrderConfirmationEmail } from '@/lib/email'
+import { canAccessOrder } from '@/lib/orders/authorization'
 import {
   createPaymentIntent,
   capturePayment,
@@ -61,6 +62,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
             city: true,
             country: true,
             onlineUrl: true,
+            organizer: {
+              select: {
+                userId: true,
+              },
+            },
           },
         },
         items: {
@@ -80,12 +86,32 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    if (order.userId !== user.id) {
+    const canManageOrder = canAccessOrder({
+      orderUserId: order.userId,
+      organizerUserId: order.event.organizer.userId,
+      requesterUserId: user.id,
+      requesterRoles: user.roles,
+    })
+    if (!canManageOrder) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    const orderForResponse = {
+      ...order,
+      event: {
+        id: order.event.id,
+        title: order.event.title,
+        startDate: order.event.startDate,
+        locationType: order.event.locationType,
+        venue: order.event.venue,
+        city: order.event.city,
+        country: order.event.country,
+        onlineUrl: order.event.onlineUrl,
+      },
+    }
+
     if (order.status === 'PAID') {
-      return NextResponse.json({ message: 'Order is already paid', order })
+      return NextResponse.json({ message: 'Order is already paid', order: orderForResponse })
     }
 
     if (order.status === 'PENDING' && order.expiresAt && order.expiresAt <= new Date()) {
@@ -107,7 +133,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (input.paymentMethod === 'INVOICE' || order.paymentMethod === 'INVOICE') {
       // Invoice orders stay in PENDING_INVOICE status until manually marked as paid
       return NextResponse.json({
-        order,
+        order: orderForResponse,
         checkout: {
           type: 'invoice',
           message: 'Invoice order created. Payment will be processed manually.',
@@ -139,7 +165,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     // If PayPal is configured, return approval URL for redirect
     if (isPayPalConfigured() && paymentIntent.approvalUrl) {
       return NextResponse.json({
-        order,
+        order: orderForResponse,
         checkout: {
           type: 'redirect',
           approvalUrl: paymentIntent.approvalUrl,

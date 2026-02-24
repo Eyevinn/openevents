@@ -338,3 +338,120 @@ export async function sendEventCancellationEmail(
     text: `Event Cancelled: ${details.eventTitle} scheduled for ${details.eventDate} has been cancelled. Order #${details.orderNumber}.`,
   })
 }
+
+export async function sendAccountDeletionConfirmationEmail(
+  email: string,
+  details: {
+    confirmUrl: string
+    expiresAt: Date
+  }
+): Promise<void> {
+  const expiryLabel = details.expiresAt.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+  await sendEmail({
+    to: email,
+    subject: `Confirm account deletion for ${APP_NAME}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Confirm account deletion</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #dc2626;">Confirm account deletion</h1>
+            <p>We received a request to delete your ${APP_NAME} account.</p>
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${details.confirmUrl}" style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Confirm account deletion
+              </a>
+            </p>
+            <p>If you do nothing, your account will remain active.</p>
+            <p>This confirmation link expires on <strong>${expiryLabel}</strong>.</p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #666;">${details.confirmUrl}</p>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `Confirm your ${APP_NAME} account deletion: ${details.confirmUrl}. This link expires on ${expiryLabel}.`,
+  })
+}
+
+export async function sendAccountDeletionScheduledEmail(
+  email: string,
+  details: {
+    scheduledFor: Date
+    gracePeriodDays: number
+    cancelUrl: string
+  }
+): Promise<void> {
+  const scheduledForLabel = details.scheduledFor.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+  await sendEmail({
+    to: email,
+    subject: `${APP_NAME} account deletion scheduled`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Account deletion scheduled</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #dc2626;">Account deletion scheduled</h1>
+            <p>Your ${APP_NAME} account is now scheduled for deletion.</p>
+            <p><strong>Deletion date:</strong> ${scheduledForLabel}</p>
+            <p>You can cancel this request at any time during the ${details.gracePeriodDays}-day grace period.</p>
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${details.cancelUrl}" style="background-color: #0f766e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                Cancel account deletion
+              </a>
+            </p>
+            <p>Or copy and paste this link into your browser:</p>
+            <p style="word-break: break-all; color: #666;">${details.cancelUrl}</p>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `Your ${APP_NAME} account deletion is scheduled for ${scheduledForLabel}. Cancel request: ${details.cancelUrl}`,
+  })
+}
+
+export async function sendAccountDeletionCancelledEmail(email: string): Promise<void> {
+  await sendEmail({
+    to: email,
+    subject: `${APP_NAME} account deletion canceled`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Account deletion canceled</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1 style="color: #0f766e;">Account deletion canceled</h1>
+            <p>Your ${APP_NAME} account deletion request has been canceled.</p>
+            <p>You can keep using your account as usual.</p>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `Your ${APP_NAME} account deletion request has been canceled.`,
+  })
+}

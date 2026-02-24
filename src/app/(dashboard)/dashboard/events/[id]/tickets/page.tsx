@@ -40,6 +40,7 @@ export default async function TicketTypesPage({ params, searchParams }: PageProp
           price: true,
           currency: true,
           soldCount: true,
+          reservedCount: true,
           maxCapacity: true,
           minPerOrder: true,
           maxPerOrder: true,
@@ -212,6 +213,8 @@ export default async function TicketTypesPage({ params, searchParams }: PageProp
                   minPerOrder: editableTicketType.minPerOrder,
                   maxPerOrder: editableTicketType.maxPerOrder,
                   isVisible: editableTicketType.isVisible,
+                  soldCount: editableTicketType.soldCount,
+                  reservedCount: editableTicketType.reservedCount,
                 }
               : undefined
           }

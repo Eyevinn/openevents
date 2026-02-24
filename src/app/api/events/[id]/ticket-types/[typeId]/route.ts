@@ -48,6 +48,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       )
     }
 
+    if (data.maxCapacity !== undefined && data.maxCapacity !== null) {
+      const minimumAllowedCapacity = existingType.soldCount + existingType.reservedCount
+      if (data.maxCapacity < minimumAllowedCapacity) {
+        return NextResponse.json(
+          {
+            error: `maxCapacity must be at least ${minimumAllowedCapacity} (sold + reserved tickets)`,
+          },
+          { status: 422 }
+        )
+      }
+    }
+
     const updatedType = await prisma.ticketType.update({
       where: { id: typeId },
       data: {

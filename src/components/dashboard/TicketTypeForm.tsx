@@ -17,6 +17,8 @@ type TicketTypeFormProps = {
     minPerOrder: number
     maxPerOrder: number
     isVisible: boolean
+    soldCount?: number
+    reservedCount?: number
   }
 }
 
@@ -25,6 +27,9 @@ export function TicketTypeForm({ title, submitLabel, action, initial }: TicketTy
   const legacyCurrency = SUPPORTED_CURRENCIES.includes(normalizedInitialCurrency as (typeof SUPPORTED_CURRENCIES)[number])
     ? null
     : normalizedInitialCurrency
+  const reservedCount = initial?.reservedCount ?? 0
+  const soldCount = initial?.soldCount ?? 0
+  const minimumAllowedCapacity = soldCount + reservedCount
 
   return (
     <form action={action} className="space-y-4 rounded-xl border border-gray-200 bg-white p-5">
@@ -68,7 +73,19 @@ export function TicketTypeForm({ title, submitLabel, action, initial }: TicketTy
         </div>
         <div>
           <Label htmlFor={`${title}-capacity`}>Max Capacity</Label>
-          <Input id={`${title}-capacity`} name="maxCapacity" type="number" min="1" defaultValue={initial?.maxCapacity ?? ''} placeholder="Leave empty for unlimited" />
+          <Input
+            id={`${title}-capacity`}
+            name="maxCapacity"
+            type="number"
+            min={initial ? Math.max(minimumAllowedCapacity, 1) : 1}
+            defaultValue={initial?.maxCapacity ?? ''}
+            placeholder="Leave empty for unlimited"
+          />
+          {initial ? (
+            <p className="mt-1 text-sm text-gray-500">
+              Sold: {soldCount} · Reserved: {reservedCount} · Minimum allowed capacity: {minimumAllowedCapacity}
+            </p>
+          ) : null}
         </div>
         <div>
           <Label htmlFor={`${title}-visible`}>Visibility</Label>

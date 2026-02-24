@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
 import { Role } from '@prisma/client'
+import { finalizeAccountDeletionForUser } from '@/lib/accountDeletion'
 
 declare module 'next-auth' {
   interface Session {
@@ -59,8 +60,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and password required')
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        const user = await prisma.user.findFirst({
+          where: {
+            email: credentials.email.toLowerCase(),
+            deletedAt: null,
+          },
           include: {
             roles: true,
           },
@@ -72,6 +76,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!user.emailVerified) {
           throw new Error('Please verify your email before logging in')
+        }
+
+        if (user.deletionScheduledFor && user.deletionScheduledFor <= new Date()) {
+          await finalizeAccountDeletionForUser(user.id)
+          throw new Error('Account has been deleted')
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -95,7 +104,31 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn() {
+    async signIn({ user }) {
+      if (!user?.id) {
+        return false
+      }
+
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          id: user.id,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          deletionScheduledFor: true,
+        },
+      })
+
+      if (!dbUser) {
+        return false
+      }
+
+      if (dbUser.deletionScheduledFor && dbUser.deletionScheduledFor <= new Date()) {
+        await finalizeAccountDeletionForUser(dbUser.id)
+        return false
+      }
+
       return true
     },
     async jwt({ token, user, trigger, session }) {
@@ -111,29 +144,93 @@ export const authOptions: NextAuthOptions = {
       // Handle session updates
       if (trigger === 'update' && session) {
         // Re-fetch user data from database
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
+        const dbUser = await prisma.user.findFirst({
+          where: {
+            id: token.id,
+            deletedAt: null,
+          },
           include: { roles: true },
         })
-        if (dbUser) {
-          token.image = dbUser.image
-          token.roles = dbUser.roles.map((r) => r.role)
-          token.email = dbUser.email
-          token.name = `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || null
+
+        if (!dbUser) {
+          token.id = ''
+          token.roles = []
+          token.email = ''
+          token.name = null
+          token.image = null
+          token.emailVerified = null
+          return token
         }
+
+        if (dbUser.deletionScheduledFor && dbUser.deletionScheduledFor <= new Date()) {
+          await finalizeAccountDeletionForUser(dbUser.id)
+          token.id = ''
+          token.roles = []
+          token.email = ''
+          token.name = null
+          token.image = null
+          token.emailVerified = null
+          return token
+        }
+
+        token.image = dbUser.image
+        token.roles = dbUser.roles.map((r) => r.role)
+        token.email = dbUser.email
+        token.name = `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || null
       }
 
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id
-        session.user.roles = token.roles
-        session.user.emailVerified = token.emailVerified
-        session.user.email = token.email as string
-        session.user.name = (token.name as string | null) || null
-        session.user.image = token.image ?? null
+      const tokenId = typeof token.id === 'string' ? token.id : ''
+      if (!tokenId) {
+        session.user.id = ''
+        session.user.roles = []
+        session.user.emailVerified = null
+        session.user.email = ''
+        session.user.name = null
+        session.user.image = null
+        return session
       }
+
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          id: tokenId,
+          deletedAt: null,
+        },
+        include: {
+          roles: true,
+        },
+      })
+
+      if (!dbUser) {
+        session.user.id = ''
+        session.user.roles = []
+        session.user.emailVerified = null
+        session.user.email = ''
+        session.user.name = null
+        session.user.image = null
+        return session
+      }
+
+      if (dbUser.deletionScheduledFor && dbUser.deletionScheduledFor <= new Date()) {
+        await finalizeAccountDeletionForUser(dbUser.id)
+        session.user.id = ''
+        session.user.roles = []
+        session.user.emailVerified = null
+        session.user.email = ''
+        session.user.name = null
+        session.user.image = null
+        return session
+      }
+
+      session.user.id = dbUser.id
+      session.user.roles = dbUser.roles.map((entry) => entry.role)
+      session.user.emailVerified = dbUser.emailVerified
+      session.user.email = dbUser.email
+      session.user.name = `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || null
+      session.user.image = dbUser.image ?? null
+
       return session
     },
   },

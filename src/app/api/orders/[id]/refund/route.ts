@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client'
 import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendEmail } from '@/lib/email'
+import { canManageRefund } from '@/lib/orders/authorization'
 import { lockTicketTypes } from '@/lib/orders'
 import { processRefund, isPayPalConfigured } from '@/lib/payments'
 import { refundOrderSchema } from '@/lib/validations'
@@ -60,7 +61,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
-    if (order.event.organizer.userId !== user.id) {
+    const canRefundOrder = canManageRefund({
+      orderUserId: order.userId,
+      organizerUserId: order.event.organizer.userId,
+      requesterUserId: user.id,
+      requesterRoles: user.roles,
+    })
+    if (!canRefundOrder) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

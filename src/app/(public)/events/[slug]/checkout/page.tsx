@@ -1,8 +1,9 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { CheckoutForm } from '@/components/tickets/CheckoutForm'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils'
+import { getCheckoutUnavailableNotice, getCheckoutUnavailableReason } from '@/lib/orders/checkoutAvailability'
 
 interface CheckoutPageProps {
   params: Promise<{ slug: string }>
@@ -26,11 +27,28 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
       onlineUrl: true,
       coverImage: true,
       status: true,
+      ticketTypes: {
+        where: { isVisible: true },
+        select: {
+          salesStartDate: true,
+          salesEndDate: true,
+          maxCapacity: true,
+          soldCount: true,
+          reservedCount: true,
+          isVisible: true,
+        },
+      },
     },
   })
 
   if (!event) {
     notFound()
+  }
+
+  const checkoutUnavailableReason = getCheckoutUnavailableReason(event)
+  if (checkoutUnavailableReason) {
+    const notice = getCheckoutUnavailableNotice(checkoutUnavailableReason)
+    redirect(`/events/${event.slug}?notice=${encodeURIComponent(notice)}`)
   }
 
   const location =

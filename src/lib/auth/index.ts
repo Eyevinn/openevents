@@ -1,6 +1,8 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from './config'
 import { Role } from '@prisma/client'
+import { prisma } from '@/lib/db'
+import { finalizeAccountDeletionForUser } from '@/lib/accountDeletion'
 
 export { authOptions } from './config'
 export * from './permissions'
@@ -11,7 +13,48 @@ export async function getSession() {
 
 export async function getCurrentUser() {
   const session = await getSession()
-  return session?.user
+  if (!session?.user?.id) {
+    return null
+  }
+
+  const dbUser = await prisma.user.findFirst({
+    where: {
+      id: session.user.id,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      image: true,
+      emailVerified: true,
+      deletionScheduledFor: true,
+      roles: {
+        select: {
+          role: true,
+        },
+      },
+    },
+  })
+
+  if (!dbUser) {
+    return null
+  }
+
+  if (dbUser.deletionScheduledFor && dbUser.deletionScheduledFor <= new Date()) {
+    await finalizeAccountDeletionForUser(dbUser.id)
+    return null
+  }
+
+  return {
+    id: dbUser.id,
+    email: dbUser.email,
+    name: `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || null,
+    image: dbUser.image,
+    roles: dbUser.roles.map((entry) => entry.role),
+    emailVerified: dbUser.emailVerified,
+  }
 }
 
 export async function requireAuth() {

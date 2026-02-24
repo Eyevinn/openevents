@@ -1,13 +1,41 @@
 import bcrypt from 'bcryptjs'
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/db'
 import { requireRole } from '@/lib/auth'
+import {
+  cancelAccountDeletionForUser,
+  requestAccountDeletion,
+} from '@/lib/accountDeletion'
 import { AccountSettings } from '@/components/dashboard/AccountSettings'
 
-export default async function AccountSettingsPage() {
+type PageProps = {
+  searchParams: Promise<{ deletion?: string | string[] }>
+}
+
+type DeletionNotice = 'requested' | 'scheduled' | 'cancelled' | 'invalid' | 'expired' | null
+
+function firstQueryValue(value: string | string[] | undefined): string | undefined {
+  if (Array.isArray(value)) {
+    return value[0]
+  }
+
+  return value
+}
+
+function parseDeletionNotice(value: string | undefined): DeletionNotice {
+  if (value === 'requested') return 'requested'
+  if (value === 'scheduled') return 'scheduled'
+  if (value === 'cancelled') return 'cancelled'
+  if (value === 'invalid') return 'invalid'
+  if (value === 'expired') return 'expired'
+  return null
+}
+
+export default async function AccountSettingsPage({ searchParams }: PageProps) {
   const user = await requireRole('ORGANIZER')
+  const query = await searchParams
+  const deletionNotice = parseDeletionNotice(firstQueryValue(query.deletion))
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -15,6 +43,8 @@ export default async function AccountSettingsPage() {
       id: true,
       email: true,
       passwordHash: true,
+      deletionRequestedAt: true,
+      deletionScheduledFor: true,
       accounts: {
         select: {
           provider: true,
@@ -80,24 +110,19 @@ export default async function AccountSettingsPage() {
     void formData
 
     const currentUser = await requireRole('ORGANIZER')
+    await requestAccountDeletion(currentUser.id)
 
-    await prisma.user.delete({
-      where: { id: currentUser.id },
-    })
+    revalidatePath('/dashboard/settings/account')
+  }
 
-    const cookieStore = await cookies()
-    const sessionCookieNames = [
-      'next-auth.session-token',
-      '__Secure-next-auth.session-token',
-      'authjs.session-token',
-      '__Secure-authjs.session-token',
-    ]
+  async function cancelDeletionAction(formData: FormData) {
+    'use server'
+    void formData
 
-    for (const cookieName of sessionCookieNames) {
-      cookieStore.delete(cookieName)
-    }
+    const currentUser = await requireRole('ORGANIZER')
+    await cancelAccountDeletionForUser(currentUser.id)
 
-    redirect('/events')
+    revalidatePath('/dashboard/settings/account')
   }
 
   return (
@@ -107,6 +132,10 @@ export default async function AccountSettingsPage() {
       updateEmailAction={updateEmailAction}
       changePasswordAction={changePasswordAction}
       deleteAccountAction={deleteAccountAction}
+      cancelDeletionAction={cancelDeletionAction}
+      deletionRequestedAt={dbUser.deletionRequestedAt}
+      deletionScheduledFor={dbUser.deletionScheduledFor}
+      deletionNotice={deletionNotice}
     />
   )
 }

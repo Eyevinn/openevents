@@ -4,6 +4,10 @@ import { requireAuth } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendOrderConfirmationEmail } from '@/lib/email'
 import { lockTicketTypes, prepareOrderItems, generateTicketCreateInput } from '@/lib/orders'
+import {
+  getCheckoutUnavailableReason,
+  getOrderErrorForCheckoutUnavailableReason,
+} from '@/lib/orders/checkoutAvailability'
 import { getOrderReservationExpiry, getOrderReservationTtlMinutes } from '@/lib/orders/reservation'
 import {
   calculateDiscountAmount,
@@ -66,6 +70,17 @@ export async function POST(request: NextRequest) {
             country: true,
             onlineUrl: true,
             status: true,
+            ticketTypes: {
+              where: { isVisible: true },
+              select: {
+                salesStartDate: true,
+                salesEndDate: true,
+                maxCapacity: true,
+                soldCount: true,
+                reservedCount: true,
+                isVisible: true,
+              },
+            },
           },
         })
 
@@ -73,8 +88,9 @@ export async function POST(request: NextRequest) {
           throw new Error('Event not found')
         }
 
-        if (event.status === 'CANCELLED' || event.status === 'COMPLETED') {
-          throw new Error('Event is not open for ticket sales')
+        const checkoutUnavailableReason = getCheckoutUnavailableReason(event)
+        if (checkoutUnavailableReason) {
+          throw new Error(getOrderErrorForCheckoutUnavailableReason(checkoutUnavailableReason))
         }
 
         const ticketTypeIds = Array.from(new Set(input.items.map((item) => item.ticketTypeId)))
@@ -380,6 +396,8 @@ export async function POST(request: NextRequest) {
         'Unauthorized',
         'Event not found',
         'Event is not open for ticket sales',
+        'Event has already started',
+        'No tickets are currently available for this event',
         'One or more ticket types were not found for this event',
         'Discount code not found',
         'Discount code is inactive, expired, or fully used',

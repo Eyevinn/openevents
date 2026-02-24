@@ -24,6 +24,14 @@ model User {
   image             String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  deletionRequestedAt DateTime?
+  deletionConfirmedAt DateTime?
+  deletionScheduledFor DateTime?
+  deletionConfirmationToken String? @unique
+  deletionConfirmationExpiresAt DateTime?
+  deletionCancellationToken String? @unique
+  deletedAt         DateTime?
+  anonymizedAt      DateTime?
 
   // Relations
   accounts          Account[]
@@ -34,6 +42,8 @@ model User {
   verificationTokens UserVerificationToken[]
   passwordResetTokens PasswordResetToken[]
 
+  @@index([deletedAt])
+  @@index([deletionScheduledFor])
   @@map("users")
 }
 
