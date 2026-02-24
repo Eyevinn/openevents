@@ -1,6 +1,8 @@
+'use client'
+
 import Link from 'next/link'
 import { EventStatus, EventVisibility, LocationType } from '@prisma/client'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Calendar, MapPin, Heart } from 'lucide-react'
 
 type EventCardProps = {
   event: {
@@ -18,41 +20,59 @@ type EventCardProps = {
     coverImage: string | null
     visibility: EventVisibility
     status: EventStatus
-    ticketTypes: Array<{ price: { toNumber: () => number }; currency: string }>
+    ticketTypes: Array<{ price: number; currency: string }>
     organizer: { orgName: string }
   }
 }
 
-function getPriceRange(ticketTypes: EventCardProps['event']['ticketTypes']) {
-  if (ticketTypes.length === 0) return 'No tickets yet'
-
-  const prices = ticketTypes.map((ticket) => ticket.price.toNumber())
+function getPriceDisplay(ticketTypes: EventCardProps['event']['ticketTypes']) {
+  if (ticketTypes.length === 0) return null
+  const prices = ticketTypes.map((ticket) => ticket.price)
   const min = Math.min(...prices)
-  const max = Math.max(...prices)
+  if (min === 0) return 'Free'
   const currency = ticketTypes[0]?.currency || 'SEK'
-
-  if (min === max) {
-    return `${currency} ${min.toFixed(2)}`
-  }
-
-  return `${currency} ${min.toFixed(2)} - ${max.toFixed(2)}`
+  const formatted = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(min)
+  return `From ${formatted}`
 }
 
 function formatLocation(event: EventCardProps['event']) {
   if (event.locationType === 'ONLINE') return 'Online event'
-  const parts = [event.venue, event.city, event.country].filter(Boolean)
+  const parts = [event.venue, event.city].filter(Boolean)
   return parts.join(', ') || 'Location TBD'
 }
 
+function formatDate(date: Date) {
+  const d = new Date(date)
+  const dateStr = d.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  const timeStr = d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+  return `${dateStr} at ${timeStr}`
+}
+
 export function EventCard({ event }: EventCardProps) {
+  const price = getPriceDisplay(event.ticketTypes)
+
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
       aria-label={`View event: ${event.title}`}
     >
-      <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
-        <div className="h-44 w-full bg-gradient-to-r from-blue-500 to-indigo-600">
+      <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[#f2f2f4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] transition-shadow hover:shadow-lg">
+        {/* Image section */}
+        <div className="relative h-[200px] w-full shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600">
           {event.coverImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -61,22 +81,48 @@ export function EventCard({ event }: EventCardProps) {
               className="h-full w-full object-cover"
             />
           ) : null}
+          <button
+            type="button"
+            onClick={(e) => e.preventDefault()}
+            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)]"
+            aria-label="Add to favourites"
+          >
+            <Heart className="h-5 w-5 text-gray-400" />
+          </button>
         </div>
-        <CardHeader className="p-3">
-          <CardTitle className="text-xl">{event.title}</CardTitle>
-          <p className="text-sm text-gray-600">by {event.organizer.orgName}</p>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-gray-700 p-3 pt-0">
-          <p>{new Date(event.startDate).toLocaleString()}</p>
-          <p>{formatLocation(event)}</p>
-          <p>{getPriceRange(event.ticketTypes)}</p>
-        </CardContent>
-        <CardFooter className="p-3 pt-0">
-          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-            {event.visibility}
-          </span>
-        </CardFooter>
-      </Card>
+
+        {/* Content section */}
+        <div className="flex flex-col gap-3 px-5 pt-5 pb-5">
+          <h3
+            className="text-[20px] font-bold leading-7 text-black"
+            style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+          >
+            {event.title}
+          </h3>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 shrink-0 text-[#364153]" />
+              <span className="text-[16px] leading-6 text-[#364153]">
+                {formatDate(event.startDate)}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 shrink-0 text-[#364153]" />
+              <span className="text-[16px] leading-6 text-[#364153]">
+                {formatLocation(event)}
+              </span>
+            </div>
+            {price && (
+              <span
+                className="text-[16px] font-semibold leading-6 text-[#5c8bd9]"
+                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+              >
+                {price}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </Link>
   )
 }

@@ -12,38 +12,25 @@ const updateEventApiSchema = updateEventSchema.extend({
   status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
 })
 
-type EventPeopleRole = 'SPEAKER' | 'ORGANIZER' | 'SPONSOR'
-
 function normalizeNameList(names?: string[]): string[] {
   return (names || []).map((name) => name.trim()).filter(Boolean)
 }
 
-function buildPeopleCreateData(names: string[], role: EventPeopleRole, sortOrderStart: number) {
-  return names.map((name, index) => ({
+function buildPeopleCreateData(speakerNames: string[], jobTitles: string[], organizations: string[]) {
+  return speakerNames.map((name, index) => ({
     name,
-    title: role === 'SPEAKER' ? 'Speaker' : role === 'ORGANIZER' ? 'Organizer' : 'Sponsor',
-    sortOrder: sortOrderStart + index,
+    title: jobTitles[index] || null,
+    sortOrder: index,
     socialLinks: {
       __kind: 'EVENT_PEOPLE',
-      role,
+      role: 'SPEAKER',
+      ...(organizations[index] ? { organization: organizations[index] } : {}),
     },
   }))
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function resolveEventPeopleRole(socialLinks: unknown): EventPeopleRole | null {
-  if (!isRecord(socialLinks)) return null
-
-  const markerKind = socialLinks.__kind
-  const markerRole = socialLinks.role
-  if (markerKind !== 'EVENT_PEOPLE') return null
-  if (markerRole === 'SPEAKER' || markerRole === 'ORGANIZER' || markerRole === 'SPONSOR') {
-    return markerRole
-  }
-  return null
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
@@ -189,50 +176,30 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       if (shouldUpdatePeople) {
         const existingSpeakers = await tx.speaker.findMany({
           where: { eventId: id },
-          select: {
-            id: true,
-            name: true,
-            socialLinks: true,
-          },
+          select: { id: true, name: true, title: true, socialLinks: true },
+          orderBy: { sortOrder: 'asc' },
         })
 
-        const taggedSpeakers = existingSpeakers
-          .map((speaker) => ({
-            id: speaker.id,
-            name: speaker.name,
-            role: resolveEventPeopleRole(speaker.socialLinks),
-          }))
-          .filter((speaker): speaker is { id: string; name: string; role: EventPeopleRole } => Boolean(speaker.role))
+        const existingNames = existingSpeakers.map((s) => s.name)
+        const existingTitles = existingSpeakers.map((s) => s.title || '')
+        const existingOrgs = existingSpeakers.map((s) => {
+          if (isRecord(s.socialLinks) && s.socialLinks.__kind === 'EVENT_PEOPLE') {
+            return String(s.socialLinks.organization || '')
+          }
+          return ''
+        })
 
-        const existingRoleNames = {
-          SPEAKER: taggedSpeakers.filter((speaker) => speaker.role === 'SPEAKER').map((speaker) => speaker.name),
-          ORGANIZER: taggedSpeakers.filter((speaker) => speaker.role === 'ORGANIZER').map((speaker) => speaker.name),
-          SPONSOR: taggedSpeakers.filter((speaker) => speaker.role === 'SPONSOR').map((speaker) => speaker.name),
-        }
+        const nextSpeakerNames = speakerNames !== undefined ? normalizeNameList(speakerNames) : existingNames
+        const nextJobTitles = organizerNames !== undefined ? normalizeNameList(organizerNames) : existingTitles
+        const nextOrganizations = sponsorNames !== undefined ? normalizeNameList(sponsorNames) : existingOrgs
 
-        const nextSpeakerNames = speakerNames !== undefined ? normalizeNameList(speakerNames) : existingRoleNames.SPEAKER
-        const nextOrganizerNames = organizerNames !== undefined ? normalizeNameList(organizerNames) : existingRoleNames.ORGANIZER
-        const nextSponsorNames = sponsorNames !== undefined ? normalizeNameList(sponsorNames) : existingRoleNames.SPONSOR
-
-        if (taggedSpeakers.length > 0) {
+        if (existingSpeakers.length > 0) {
           await tx.speaker.deleteMany({
-            where: {
-              id: {
-                in: taggedSpeakers.map((speaker) => speaker.id),
-              },
-            },
+            where: { id: { in: existingSpeakers.map((s) => s.id) } },
           })
         }
 
-        const peopleCreateData = [
-          ...buildPeopleCreateData(nextSpeakerNames, 'SPEAKER', 0),
-          ...buildPeopleCreateData(nextOrganizerNames, 'ORGANIZER', nextSpeakerNames.length),
-          ...buildPeopleCreateData(
-            nextSponsorNames,
-            'SPONSOR',
-            nextSpeakerNames.length + nextOrganizerNames.length
-          ),
-        ]
+        const peopleCreateData = buildPeopleCreateData(nextSpeakerNames, nextJobTitles, nextOrganizations)
 
         if (peopleCreateData.length > 0) {
           await tx.speaker.createMany({

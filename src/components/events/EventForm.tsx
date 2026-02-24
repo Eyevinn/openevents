@@ -1489,19 +1489,19 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             </div>
           ) : null}
           <div>
-            <Label htmlFor="organizerNames">Organizers</Label>
+            <Label htmlFor="organizerNames">Job title</Label>
             <Input
               id="organizerNames"
-              placeholder="OpenEvents Team"
+              placeholder="Developer, Consultant"
               value={form.organizerNames || ''}
               onChange={(e) => updateField('organizerNames', e.target.value)}
             />
           </div>
           <div>
-            <Label htmlFor="sponsorNames">Sponsors</Label>
+            <Label htmlFor="sponsorNames">Organization</Label>
             <Input
               id="sponsorNames"
-              placeholder="Company A, Company B"
+              placeholder="Tech Corp, Innovation Inc"
               value={form.sponsorNames || ''}
               onChange={(e) => updateField('sponsorNames', e.target.value)}
             />

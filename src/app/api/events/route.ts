@@ -6,20 +6,19 @@ import { createEventSchema } from '@/lib/validations/event'
 import { DEFAULT_CURRENCY } from '@/lib/constants/currencies'
 import { generateUniqueSlug } from '@/lib/utils'
 
-type EventPeopleRole = 'SPEAKER' | 'ORGANIZER' | 'SPONSOR'
-
 function normalizeNameList(names?: string[]): string[] {
   return (names || []).map((name) => name.trim()).filter(Boolean)
 }
 
-function buildPeopleCreateData(names: string[], role: EventPeopleRole, sortOrderStart: number) {
-  return names.map((name, index) => ({
+function buildPeopleCreateData(speakerNames: string[], jobTitles: string[], organizations: string[]) {
+  return speakerNames.map((name, index) => ({
     name,
-    title: role === 'SPEAKER' ? 'Speaker' : role === 'ORGANIZER' ? 'Organizer' : 'Sponsor',
-    sortOrder: sortOrderStart + index,
+    title: jobTitles[index] || null,
+    sortOrder: index,
     socialLinks: {
       __kind: 'EVENT_PEOPLE',
-      role,
+      role: 'SPEAKER',
+      ...(organizations[index] ? { organization: organizations[index] } : {}),
     },
   }))
 }
@@ -82,15 +81,11 @@ export async function POST(request: NextRequest) {
     const normalizedOrganizerNames = normalizeNameList(organizerNames)
     const normalizedSponsorNames = normalizeNameList(sponsorNames)
 
-    const peopleCreateData = [
-      ...buildPeopleCreateData(normalizedSpeakerNames, 'SPEAKER', 0),
-      ...buildPeopleCreateData(normalizedOrganizerNames, 'ORGANIZER', normalizedSpeakerNames.length),
-      ...buildPeopleCreateData(
-        normalizedSponsorNames,
-        'SPONSOR',
-        normalizedSpeakerNames.length + normalizedOrganizerNames.length
-      ),
-    ]
+    const peopleCreateData = buildPeopleCreateData(
+      normalizedSpeakerNames,
+      normalizedOrganizerNames,
+      normalizedSponsorNames
+    )
 
     if (categoryIds.length > 0) {
       const existingCategories = await prisma.category.count({

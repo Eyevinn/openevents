@@ -76,7 +76,7 @@ export default async function HomePage() {
             </h2>
             <Link
               href="/events"
-              className="inline-flex items-center justify-center rounded-[10px] bg-[#4893c9] px-[15px] py-[10px] text-[16px] font-medium text-white transition-colors hover:bg-[#3a7fb0]"
+              className="inline-flex items-center justify-center rounded-[10px] bg-[#5c8bd9] px-[15px] py-[10px] text-[16px] font-semibold text-white transition-colors hover:bg-[#4a7ac8]"
               style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
             >
               View all events
