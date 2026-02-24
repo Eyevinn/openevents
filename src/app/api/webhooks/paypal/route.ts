@@ -356,6 +356,13 @@ async function handleCaptureDenied(event: PayPalWebhookEvent) {
 async function handleCaptureRefunded(event: PayPalWebhookEvent) {
   const resource = event.resource as {
     id: string
+    capture_id?: string
+    supplementary_data?: {
+      related_ids?: {
+        capture_id?: string
+        order_id?: string
+      }
+    }
     amount?: {
       value: string
       currency_code: string
@@ -363,40 +370,100 @@ async function handleCaptureRefunded(event: PayPalWebhookEvent) {
   }
 
   const refundId = resource.id
+  const captureId =
+    resource.supplementary_data?.related_ids?.capture_id ??
+    resource.capture_id
 
-  console.log('[Webhook] Capture refunded:', refundId)
+  console.log('[Webhook] Capture refunded:', { refundId, captureId })
 
-  // Find order by payment ID (capture ID)
-  // Note: We'd need to store the capture ID separately to match this properly
-  // For now, we'll update any order that has a pending refund
+  if (!captureId) {
+    console.warn('[Webhook] Refund event missing capture ID. Skipping.')
+    return
+  }
+
+  // Match exactly by PayPal capture ID stored on order.paymentId
   const order = await prisma.order.findFirst({
     where: {
-      refundStatus: 'PENDING',
+      paymentMethod: PaymentMethod.PAYPAL,
+      paymentId: captureId,
+    },
+    include: {
+      items: {
+        select: {
+          ticketTypeId: true,
+          quantity: true,
+        },
+      },
     },
   })
 
-  if (order) {
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: 'REFUNDED',
-        refundStatus: 'PROCESSED',
-        refundedAt: new Date(),
-      },
-    })
-
-    // Notify buyer
-    await sendEmail({
-      to: order.buyerEmail,
-      subject: `Refund completed for order #${order.orderNumber}`,
-      html: `
-        <p>Hi ${order.buyerFirstName},</p>
-        <p>Your refund for order #${order.orderNumber} has been processed.</p>
-        <p>The funds should appear in your PayPal account within a few business days.</p>
-      `,
-      text: `Your refund for order #${order.orderNumber} has been processed.`,
-    })
-
-    console.log('[Webhook] Order refund completed:', order.orderNumber)
+  if (!order) {
+    console.warn('[Webhook] No order found for refunded capture ID:', captureId)
+    return
   }
+
+  if (order.status === 'REFUNDED' && order.refundStatus === 'PROCESSED') {
+    console.log('[Webhook] Order already marked refunded:', order.orderNumber)
+    return
+  }
+
+  await prisma.$transaction(
+    async (tx) => {
+      if (order.status === 'PAID') {
+        const ticketTypeIds = Array.from(new Set(order.items.map((item) => item.ticketTypeId)))
+
+        await lockTicketTypes(tx, ticketTypeIds)
+
+        for (const item of order.items) {
+          await tx.ticketType.update({
+            where: { id: item.ticketTypeId },
+            data: {
+              soldCount: {
+                decrement: item.quantity,
+              },
+            },
+          })
+        }
+
+        await tx.ticket.updateMany({
+          where: {
+            orderId: order.id,
+            status: 'ACTIVE',
+          },
+          data: {
+            status: 'CANCELLED',
+          },
+        })
+      }
+
+      await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: 'REFUNDED',
+          refundStatus: 'PROCESSED',
+          refundedAt: new Date(),
+          refundNotes: order.refundNotes
+            ? `${order.refundNotes}\nPayPal webhook refund processed. Refund ID: ${refundId}.`
+            : `PayPal webhook refund processed. Refund ID: ${refundId}.`,
+        },
+      })
+    },
+    {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+    }
+  )
+
+  // Notify buyer
+  await sendEmail({
+    to: order.buyerEmail,
+    subject: `Refund completed for order #${order.orderNumber}`,
+    html: `
+      <p>Hi ${order.buyerFirstName},</p>
+      <p>Your refund for order #${order.orderNumber} has been processed.</p>
+      <p>The funds should appear in your PayPal account within a few business days.</p>
+    `,
+    text: `Your refund for order #${order.orderNumber} has been processed.`,
+  })
+
+  console.log('[Webhook] Order refund completed:', order.orderNumber)
 }

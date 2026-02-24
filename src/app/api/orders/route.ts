@@ -41,6 +41,14 @@ export async function POST(request: NextRequest) {
     }
 
     const input = parsed.data
+    const accountEmail = user.email?.trim() || input.buyer.email?.trim()
+
+    if (!accountEmail) {
+      return NextResponse.json(
+        { error: 'Authenticated account email is required to place an order' },
+        { status: 400 }
+      )
+    }
 
     const createdOrder = await prisma.$transaction(
       async (tx) => {
@@ -211,7 +219,7 @@ export async function POST(request: NextRequest) {
             buyerFirstName: input.buyer.firstName,
             buyerLastName: input.buyer.lastName,
             buyerTitle: input.buyer.title,
-            buyerEmail: input.buyer.email,
+            buyerEmail: accountEmail,
             buyerOrganization: input.buyer.organization,
             buyerAddress: input.buyer.address,
             buyerCity: input.buyer.city,

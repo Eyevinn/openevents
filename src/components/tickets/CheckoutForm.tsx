@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -83,7 +83,7 @@ function formatRemainingTime(totalSeconds: number): string {
 export function CheckoutForm({ event }: CheckoutFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { status } = useSession()
+  const { data: session, status } = useSession()
 
   const [ticketTypes, setTicketTypes] = useState<SelectableTicketType[]>([])
   const [ticketLoading, setTicketLoading] = useState(true)
@@ -99,11 +99,13 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
   )
   const [reservationExpiresAt, setReservationExpiresAt] = useState<Date | null>(null)
   const [reservationSecondsRemaining, setReservationSecondsRemaining] = useState<number | null>(null)
+  const hasExpiryRedirectedRef = useRef(false)
 
   // Map of ticketTypeId -> AttendeeFormState[]
   const [attendeesByType, setAttendeesByType] = useState<Record<string, AttendeeFormState[]>>({})
 
   const wasCancelled = searchParams.get('cancelled') === 'true'
+  const wasExpired = searchParams.get('expired') === 'true'
 
   const isAuthenticated = status === 'authenticated'
   const isLoadingAuth = status === 'loading'
@@ -111,7 +113,7 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
   const [buyer, setBuyer] = useState<BuyerFormState>({
     firstName: '',
     lastName: '',
-    email: '',
+    email: session?.user?.email ?? '',
     title: '',
     organization: '',
     address: '',
@@ -119,6 +121,7 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
     postalCode: '',
     country: '',
   })
+  const reservationStorageKey = `checkout-reservation:${event.id}`
 
   const [paymentMethod, setPaymentMethod] = useState<'PAYPAL' | 'INVOICE'>('PAYPAL')
 
@@ -259,23 +262,83 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
   }, [discount])
 
   useEffect(() => {
+    const accountEmail = session?.user?.email?.trim()
+    if (!accountEmail) return
+
+    setBuyer((current) => (
+      current.email === accountEmail
+        ? current
+        : { ...current, email: accountEmail }
+    ))
+  }, [session?.user?.email])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (wasCancelled || wasExpired) {
+      window.localStorage.removeItem(reservationStorageKey)
+      return
+    }
+
+    const persistedExpiry = window.localStorage.getItem(reservationStorageKey)
+    if (!persistedExpiry) return
+
+    const parsedExpiry = new Date(persistedExpiry)
+    if (Number.isNaN(parsedExpiry.getTime()) || parsedExpiry.getTime() <= Date.now()) {
+      window.localStorage.removeItem(reservationStorageKey)
+      return
+    }
+
+    setReservationExpiresAt(parsedExpiry)
+  }, [reservationStorageKey, wasCancelled, wasExpired])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (reservationExpiresAt) {
+      window.localStorage.setItem(reservationStorageKey, reservationExpiresAt.toISOString())
+      return
+    }
+
+    window.localStorage.removeItem(reservationStorageKey)
+  }, [reservationExpiresAt, reservationStorageKey])
+
+  useEffect(() => {
     if (!reservationExpiresAt) {
       setReservationSecondsRemaining(null)
+      hasExpiryRedirectedRef.current = false
       return
     }
 
     const updateRemaining = () => {
       const remainingSeconds = Math.ceil((reservationExpiresAt.getTime() - Date.now()) / 1000)
-      setReservationSecondsRemaining(Math.max(0, remainingSeconds))
+      if (remainingSeconds <= 0) {
+        setReservationSecondsRemaining(0)
+        setReservationExpiresAt(null)
+
+        if (!hasExpiryRedirectedRef.current) {
+          hasExpiryRedirectedRef.current = true
+          setSubmitError('Your reservation expired. Please start checkout again.')
+          router.replace(`/events/${event.slug}/checkout?expired=true`)
+        }
+
+        return true
+      }
+
+      setReservationSecondsRemaining(remainingSeconds)
+      return false
     }
 
-    updateRemaining()
+    if (updateRemaining()) {
+      return
+    }
+
     const interval = window.setInterval(updateRemaining, 1000)
 
     return () => {
       window.clearInterval(interval)
     }
-  }, [reservationExpiresAt])
+  }, [event.slug, reservationExpiresAt, router])
 
   function handleQuantityChange(ticketTypeId: string, quantity: number) {
     setQuantities((current) => ({
@@ -313,8 +376,15 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
       return
     }
 
-    if (!buyer.firstName || !buyer.lastName || !buyer.email) {
-      setSubmitError('First name, last name, and email are required')
+    const accountEmail = session?.user?.email?.trim() || buyer.email.trim()
+
+    if (!buyer.firstName || !buyer.lastName) {
+      setSubmitError('First name and last name are required')
+      return
+    }
+
+    if (!accountEmail) {
+      setSubmitError('Your account does not have an email address. Please update your profile.')
       return
     }
 
@@ -349,7 +419,10 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
             quantity: item.quantity,
             attendees: (attendeesByType[item.ticketTypeId] ?? []).slice(0, item.quantity),
           })),
-          buyer,
+          buyer: {
+            ...buyer,
+            email: accountEmail,
+          },
           discountCode: discount?.code,
         }),
       })
@@ -533,16 +606,13 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="buyer-email" required>
-                Email
-              </Label>
-              <Input
+              <Label htmlFor="buyer-email">Account Email</Label>
+              <p
                 id="buyer-email"
-                type="email"
-                value={buyer.email}
-                onChange={(eventValue) => updateBuyerField('email', eventValue.target.value)}
-                required
-              />
+                className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+              >
+                {session?.user?.email || 'No account email available'}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="buyer-title">Title</Label>
@@ -790,6 +860,14 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
           <div className="rounded-md border border-yellow-200 bg-yellow-50 p-3">
             <p className="text-sm text-yellow-800">
               Payment was cancelled. You can try again when ready.
+            </p>
+          </div>
+        )}
+
+        {wasExpired && (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3">
+            <p className="text-sm text-red-700">
+              Your previous reservation expired. Select tickets again to continue checkout.
             </p>
           </div>
         )}
