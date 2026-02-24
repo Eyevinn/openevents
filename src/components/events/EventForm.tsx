@@ -3,6 +3,7 @@
 import Cropper, { Area } from 'react-easy-crop'
 import { ChangeEvent, DragEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FloatingToast } from '@/components/ui/floating-toast'
@@ -400,6 +401,7 @@ function buildSnapshot(form: EventFormData) {
 }
 
 export function EventForm({ mode, initialData, children }: EventFormProps) {
+  const t = useTranslations('eventForm')
   const router = useRouter()
   const bannerInputRef = useRef<HTMLInputElement | null>(null)
   const bottomInputRef = useRef<HTMLInputElement | null>(null)
@@ -534,7 +536,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     const ticket = form.ticketTypes?.[index]
     if (!ticket) return
 
-    if (ticket.id && !window.confirm('Remove this ticket type?')) {
+    if (ticket.id && !window.confirm(t('removeTicketConfirm'))) {
       return
     }
 
@@ -783,35 +785,35 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     const startUtc = dateTimeLocalInTimeZoneToUtcIso(form.startDate, timezone)
     const endUtc = dateTimeLocalInTimeZoneToUtcIso(form.endDate, timezone)
 
-    if (!form.title?.trim()) nextFieldErrors.title = 'Enter an event title.'
+    if (!form.title?.trim()) nextFieldErrors.title = t('validation.titleRequired')
 
     if (!form.startDate?.trim()) {
-      nextFieldErrors.startDate = 'Set start date and time.'
+      nextFieldErrors.startDate = t('validation.startRequired')
     } else if (!startUtc) {
-      nextFieldErrors.startDate = 'Use a valid start date and time.'
+      nextFieldErrors.startDate = t('validation.startInvalid')
     }
 
     if (!form.endDate?.trim()) {
-      nextFieldErrors.endDate = 'Set end date and time.'
+      nextFieldErrors.endDate = t('validation.endRequired')
     } else if (!endUtc) {
-      nextFieldErrors.endDate = 'Use a valid end date and time.'
+      nextFieldErrors.endDate = t('validation.endInvalid')
     }
 
     if (!form.timezone?.trim()) {
-      nextFieldErrors.timezone = 'Select a timezone.'
+      nextFieldErrors.timezone = t('validation.timezoneRequired')
     } else if (!isValidTimeZone(form.timezone)) {
-      nextFieldErrors.timezone = 'Select a valid IANA timezone.'
+      nextFieldErrors.timezone = t('validation.timezoneInvalid')
     }
 
     if (startUtc && endUtc && new Date(endUtc) <= new Date(startUtc)) {
-      nextFieldErrors.endDate = 'End time must be after start time.'
+      nextFieldErrors.endDate = t('validation.endAfterStart')
     }
 
     if (requireComplete && form.locationType !== 'ONLINE') {
-      if (!form.venue?.trim()) nextFieldErrors.venue = 'Enter venue.'
-      if (!form.address?.trim()) nextFieldErrors.address = 'Enter address.'
-      if (!form.city?.trim()) nextFieldErrors.city = 'Enter city.'
-      if (!form.country?.trim()) nextFieldErrors.country = 'Enter country.'
+      if (!form.venue?.trim()) nextFieldErrors.venue = t('validation.venueRequired')
+      if (!form.address?.trim()) nextFieldErrors.address = t('validation.addressRequired')
+      if (!form.city?.trim()) nextFieldErrors.city = t('validation.cityRequired')
+      if (!form.country?.trim()) nextFieldErrors.country = t('validation.countryRequired')
     }
 
     if (
@@ -819,11 +821,11 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       (form.locationType === 'ONLINE' || form.locationType === 'HYBRID') &&
       !form.onlineUrl?.trim()
     ) {
-      nextFieldErrors.onlineUrl = 'Enter an online URL.'
+      nextFieldErrors.onlineUrl = t('validation.onlineUrlRequired')
     }
 
     if (requireComplete && !form.description?.trim()) {
-      nextFieldErrors.description = 'Add an event description.'
+      nextFieldErrors.description = t('validation.descriptionRequired')
     }
 
     const ticketTypes = form.ticketTypes || []
@@ -844,11 +846,11 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         continue
       }
 
-      if (!name) rowErrors.name = 'Enter ticket name.'
-      if (price === null || price < 0) rowErrors.price = 'Enter a valid price (0 or greater).'
-      if (!isSupportedCurrency(currency)) rowErrors.currency = 'Select a supported currency.'
+      if (!name) rowErrors.name = t('validation.ticketNameRequired')
+      if (price === null || price < 0) rowErrors.price = t('validation.ticketPriceInvalid')
+      if (!isSupportedCurrency(currency)) rowErrors.currency = t('validation.ticketCurrencyInvalid')
       if (maxCapacity !== null && (!Number.isInteger(maxCapacity) || maxCapacity < 1)) {
-        rowErrors.capacity = 'Enter a whole number greater than 0 or leave empty.'
+        rowErrors.capacity = t('validation.ticketCapacityInvalid')
       }
 
       if (name) {
@@ -865,30 +867,30 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     for (const duplicateIndexes of seenTicketNames.values()) {
       if (duplicateIndexes.length < 2) continue
       for (const index of duplicateIndexes) {
-        nextTicketErrors[index].name = 'Ticket names must be unique.'
+        nextTicketErrors[index].name = t('validation.ticketNamesUnique')
       }
     }
 
     if (requireComplete && ticketTypes.length < 1) {
-      nextGeneralErrors.push('Add at least one ticket type before publishing.')
+      nextGeneralErrors.push(t('validation.addTicketBeforePublish'))
     }
 
     if (requireComplete && ticketTypes.length > 0 && !hasPublishableTicketType) {
-      nextGeneralErrors.push('Fix ticket type details before publishing.')
+      nextGeneralErrors.push(t('validation.fixTicketDetails'))
     }
 
     const hasTicketErrors = nextTicketErrors.some((row) => Object.keys(row).length > 0)
 
     if (action === 'publish' && Object.keys(nextFieldErrors).length > 0) {
-      nextGeneralErrors.push('Cannot publish yet. Fix the highlighted fields.')
+      nextGeneralErrors.push(t('validation.fixHighlightedPublish'))
     }
 
     if (action === 'save' && (Object.keys(nextFieldErrors).length > 0 || hasTicketErrors)) {
-      nextGeneralErrors.push('Please fix the highlighted fields before saving.')
+      nextGeneralErrors.push(t('validation.fixHighlightedSave'))
     }
 
     if (action === 'publish' && hasTicketErrors) {
-      nextGeneralErrors.push('Cannot publish yet. Fix ticket type fields.')
+      nextGeneralErrors.push(t('validation.fixTicketFieldsPublish'))
     }
 
     return {
@@ -1180,7 +1182,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       }
 
       if (mode === 'edit') {
-        setToast({ message: action === 'publish' ? 'Event published' : 'Event updated', tone: 'success' })
+        setToast({ message: action === 'publish' ? t('eventPublished') : t('eventUpdated'), tone: 'success' })
         router.refresh()
         return
       }
@@ -1220,7 +1222,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       Boolean(croppedImageFiles.coverImage) ||
       Boolean(croppedImageFiles.bottomImage)
 
-    if (isDirty && !window.confirm('Discard unsaved changes?')) {
+    if (isDirty && !window.confirm(t('discardConfirm'))) {
       return
     }
 
@@ -1257,7 +1259,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
   return (
     <div className="space-y-8 px-1 sm:px-0">
       <h2 className="text-3xl font-semibold tracking-tight text-gray-900">
-        {mode === 'create' ? 'Create Event Info' : 'Edit Event Info'}
+        {mode === 'create' ? t('titleCreate') : t('titleEdit')}
       </h2>
 
       {generalErrors.length > 0 ? (
@@ -1287,7 +1289,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         onDrop={(event) => {
           void onImageDrop(event, 'coverImage')
         }}
-        aria-label={bannerImageSrc ? 'Change banner image' : 'Add banner image'}
+        aria-label={bannerImageSrc ? t('changeBannerAriaLabel') : t('addBannerAriaLabel')}
         className={`group relative block aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-xl border-4 bg-gray-900 text-left transition-shadow duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
           isBannerDropActive
             ? 'border-blue-500 ring-2 ring-blue-500/40'
@@ -1300,7 +1302,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={bannerImageSrc}
-            alt="Event banner"
+            alt={t('bannerAlt')}
             className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.01] group-hover:brightness-95 group-focus-visible:brightness-95"
           />
         ) : (
@@ -1314,7 +1316,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             }`}
           >
             <span className="inline-flex rounded-md bg-black/60 px-3 py-1.5 text-sm font-medium text-white">
-              {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop banner image' : 'Click to change banner image'}
+              {isUploadingBanner ? t('uploading') : isBannerDropActive ? t('dropImage', { target: t('bannerTarget') }) : t('clickToChange', { target: t('bannerTarget') })}
             </span>
           </div>
         ) : (

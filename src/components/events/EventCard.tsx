@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { EventStatus, EventVisibility, LocationType } from '@prisma/client'
 import { Calendar, MapPin, Heart } from 'lucide-react'
+import { useTranslations, useLocale } from 'next-intl'
 
 type EventCardProps = {
   event: {
@@ -25,50 +26,51 @@ type EventCardProps = {
   }
 }
 
-function getPriceDisplay(ticketTypes: EventCardProps['event']['ticketTypes']) {
-  if (ticketTypes.length === 0) return null
-  const prices = ticketTypes.map((ticket) => ticket.price)
-  const min = Math.min(...prices)
-  if (min === 0) return 'Free'
-  const currency = ticketTypes[0]?.currency || 'SEK'
-  const formatted = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(min)
-  return `From ${formatted}`
-}
+export function EventCard({ event }: EventCardProps) {
+  const t = useTranslations('events.card')
+  const locale = useLocale()
 
-function formatLocation(event: EventCardProps['event']) {
-  if (event.locationType === 'ONLINE') return 'Online event'
-  const parts = [event.venue, event.city].filter(Boolean)
-  return parts.join(', ') || 'Location TBD'
-}
+  // Price display
+  let priceDisplay: string | null = null
+  if (event.ticketTypes.length > 0) {
+    const min = Math.min(...event.ticketTypes.map((t) => t.price))
+    if (min === 0) {
+      priceDisplay = t('free')
+    } else {
+      const currency = event.ticketTypes[0]?.currency || 'SEK'
+      const formatted = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(min)
+      priceDisplay = t('fromPrice', { price: formatted })
+    }
+  }
 
-function formatDate(date: Date) {
-  const d = new Date(date)
-  const dateStr = d.toLocaleDateString('en-US', {
-    month: 'long',
+  // Location display
+  let locationDisplay: string
+  if (event.locationType === 'ONLINE') {
+    locationDisplay = t('onlineEvent')
+  } else {
+    const parts = [event.venue, event.city].filter(Boolean)
+    locationDisplay = parts.join(', ') || t('locationTBD')
+  }
+
+  // Locale-aware date formatting
+  const formattedDate = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
+    month: 'long',
     year: 'numeric',
-  })
-  const timeStr = d.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
-  })
-  return `${dateStr} at ${timeStr}`
-}
-
-export function EventCard({ event }: EventCardProps) {
-  const price = getPriceDisplay(event.ticketTypes)
+  }).format(new Date(event.startDate))
 
   return (
     <Link
       href={`/events/${event.slug}`}
       className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      aria-label={`View event: ${event.title}`}
+      aria-label={t('viewEventAriaLabel', { title: event.title })}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[#f2f2f4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] transition-shadow hover:shadow-lg">
         {/* Image section */}
@@ -85,7 +87,7 @@ export function EventCard({ event }: EventCardProps) {
             type="button"
             onClick={(e) => e.preventDefault()}
             className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)]"
-            aria-label="Add to favourites"
+            aria-label={t('addToFavourites')}
           >
             <Heart className="h-5 w-5 text-gray-400" />
           </button>
@@ -103,21 +105,21 @@ export function EventCard({ event }: EventCardProps) {
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 shrink-0 text-[#364153]" />
               <span className="text-[16px] leading-6 text-[#364153]">
-                {formatDate(event.startDate)}
+                {formattedDate}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <MapPin className="h-4 w-4 shrink-0 text-[#364153]" />
               <span className="text-[16px] leading-6 text-[#364153]">
-                {formatLocation(event)}
+                {locationDisplay}
               </span>
             </div>
-            {price && (
+            {priceDisplay && (
               <span
                 className="text-[16px] font-semibold leading-6 text-[#5c8bd9]"
                 style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
               >
-                {price}
+                {priceDisplay}
               </span>
             )}
           </div>

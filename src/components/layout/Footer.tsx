@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 
-export function Footer() {
+export async function Footer() {
+  const t = await getTranslations('footer')
+
   return (
     <footer className="border-t border-gray-200 bg-gray-50 text-gray-600 print:hidden">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -11,33 +14,33 @@ export function Footer() {
               OpenEvents
             </Link>
             <p className="mt-4 text-sm text-gray-500">
-              Organizing events starts here
+              {t('tagline')}
             </p>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Features</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{t('features.title')}</h3>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <a href="#" className="hover:text-gray-900">Core features</a>
+                <a href="#" className="hover:text-gray-900">{t('features.coreFeatures')}</a>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900">Pro experience</a>
+                <a href="#" className="hover:text-gray-900">{t('features.proExperience')}</a>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900">Integrations</a>
+                <a href="#" className="hover:text-gray-900">{t('features.integrations')}</a>
               </li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Learn more</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{t('learnMore.title')}</h3>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
-                <a href="#" className="hover:text-gray-900">Customer stories</a>
+                <a href="#" className="hover:text-gray-900">{t('learnMore.customerStories')}</a>
               </li>
               <li>
-                <a href="#" className="hover:text-gray-900">Best practices</a>
+                <a href="#" className="hover:text-gray-900">{t('learnMore.bestPractices')}</a>
               </li>
             </ul>
           </div>
@@ -45,17 +48,17 @@ export function Footer() {
           {/* Support */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900">
-              Support
+              {t('support.title')}
             </h3>
             <ul className="mt-4 space-y-2 text-sm">
               <li>
                 <a href="#" className="hover:text-gray-900">
-                  Contact Us
+                  {t('support.contactUs')}
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-gray-900">
-                  Support
+                  {t('support.supportLink')}
                 </a>
               </li>
             </ul>

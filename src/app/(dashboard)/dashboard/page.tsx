@@ -1,4 +1,5 @@
 import { OrderStatus } from '@prisma/client'
+import { getTranslations } from 'next-intl/server'
 import { prisma } from '@/lib/db'
 import { requireOrganizerProfile } from '@/lib/dashboard/organizer'
 import { DashboardStats } from '@/components/dashboard/DashboardStats'
@@ -8,6 +9,7 @@ import { RecentOrders } from '@/components/dashboard/RecentOrders'
 const revenueStatuses: OrderStatus[] = ['PAID', 'PENDING_INVOICE']
 
 export default async function DashboardHomePage() {
+  const t = await getTranslations('dashboard.home')
   const { organizerProfile } = await requireOrganizerProfile()
 
   const now = new Date()
@@ -101,8 +103,8 @@ export default async function DashboardHomePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Welcome, {organizerProfile.orgName}</h1>
-          <p className="text-gray-600">Overview of your events, orders, and revenue.</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('welcome', { name: organizerProfile.orgName })}</h1>
+          <p className="text-gray-600">{t('subtitle')}</p>
         </div>
       </div>
 
