@@ -2,11 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
 
 type Category = { id: string; name: string; slug: string }
 
 export function HeroSearchBar({ categories }: { categories: Category[] }) {
   const router = useRouter()
+  const t = useTranslations('events.searchBar')
+  const locale = useLocale()
+
   const [search, setSearch] = useState('')
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [location, setLocation] = useState('')
@@ -42,7 +46,14 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
   // ── Calendar helpers ──────────────────────────────────────────────────────
   const year = calendarDate.getFullYear()
   const month = calendarDate.getMonth()
-  const monthLabel = calendarDate.toLocaleString('default', { month: 'long' })
+
+  // Locale-aware month label
+  const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long' }).format(calendarDate)
+
+  // Locale-aware weekday abbreviations (Sunday-first)
+  const weekdays = Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 7 + i))
+  )
 
   const daysInMonth = new Date(year, month + 1, 0).getDate()
   const startDay = new Date(year, month, 1).getDay()
@@ -68,8 +79,9 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
     setOpenPanel(null)
   }
 
+  // Locale-aware date formatting for selected date display
   const formatDate = (d: Date) =>
-    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(d)
 
   return (
     <div ref={containerRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -81,7 +93,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          placeholder="Search for events"
+          placeholder={t('searchPlaceholder')}
           className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-black placeholder-gray-500 px-4"
         />
 
@@ -92,7 +104,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
             onClick={() => togglePanel('date')}
             className="flex items-center gap-1.5 px-5 py-2 text-[16px] text-black rounded-full hover:bg-black/[0.06] transition-colors whitespace-nowrap"
           >
-            {selectedDate ? formatDate(selectedDate) : 'Date'}
+            {selectedDate ? formatDate(selectedDate) : t('date')}
             <ChevronDown />
           </button>
 
@@ -103,7 +115,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
                 <button
                   onClick={() => setCalendarDate(new Date(year, month - 1, 1))}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Previous month"
+                  aria-label={t('previousMonth')}
                 >
                   <ChevronLeft />
                 </button>
@@ -113,7 +125,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
                 <button
                   onClick={() => setCalendarDate(new Date(year, month + 1, 1))}
                   className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="Next month"
+                  aria-label={t('nextMonth')}
                 >
                   <ChevronRight />
                 </button>
@@ -121,7 +133,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
 
               {/* Weekday headers */}
               <div className="grid grid-cols-7 mb-1">
-                {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                {weekdays.map(d => (
                   <div key={d} className="text-center text-[11px] font-semibold text-gray-400 py-1 uppercase tracking-wide">
                     {d}
                   </div>
@@ -157,7 +169,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
                   onClick={() => setSelectedDate(null)}
                   className="mt-3 w-full text-center text-[13px] text-gray-400 hover:text-gray-600 transition-colors py-1"
                 >
-                  Clear date
+                  {t('clearDate')}
                 </button>
               )}
             </div>
@@ -171,14 +183,14 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
             onClick={() => togglePanel('location')}
             className="flex items-center gap-1.5 px-5 py-2 text-[16px] text-black rounded-full hover:bg-black/[0.06] transition-colors whitespace-nowrap max-w-[160px] truncate"
           >
-            <span className="truncate">{location || 'Location'}</span>
+            <span className="truncate">{location || t('location')}</span>
             <ChevronDown />
           </button>
 
           {openPanel === 'location' && (
             <div className="absolute top-[calc(100%+12px)] left-0 z-50 bg-white rounded-2xl shadow-2xl p-5 w-[280px]">
               <label className="block text-[13px] font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                Location
+                {t('location')}
               </label>
               <input
                 type="text"
@@ -187,7 +199,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
                 onKeyDown={e => {
                   if (e.key === 'Enter') { setOpenPanel(null); handleSearch() }
                 }}
-                placeholder="City, venue, country..."
+                placeholder={t('locationInputPlaceholder')}
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-[14px] outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 autoFocus
               />
@@ -196,7 +208,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
                   onClick={() => setLocation('')}
                   className="mt-2 text-[13px] text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  Clear
+                  {t('clearLocation')}
                 </button>
               )}
             </div>
@@ -210,7 +222,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
             onClick={() => togglePanel('category')}
             className="flex items-center gap-1.5 px-5 py-2 text-[16px] text-black rounded-full hover:bg-black/[0.06] transition-colors whitespace-nowrap"
           >
-            {selectedCategory?.name || 'Category'}
+            {selectedCategory?.name || t('category')}
             <ChevronDown />
           </button>
 
@@ -221,7 +233,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
                 className={`w-full text-left px-4 py-3 text-[14px] transition-colors hover:bg-gray-50
                   ${!selectedCategory ? 'font-semibold text-blue-600' : 'text-gray-700'}`}
               >
-                All Categories
+                {t('allCategories')}
               </button>
               {categories.map(cat => (
                 <button
@@ -240,7 +252,7 @@ export function HeroSearchBar({ categories }: { categories: Category[] }) {
         {/* ── Search icon ───────────────────────────────────────────────────── */}
         <button
           onClick={handleSearch}
-          aria-label="Search events"
+          aria-label={t('searchAriaLabel')}
           className="ml-2 mr-1 w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/[0.06] transition-colors shrink-0 text-gray-600"
         >
           <SearchIcon />

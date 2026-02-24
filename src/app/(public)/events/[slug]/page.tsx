@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Heart, MapPin } from 'lucide-react'
+import { Calendar, Heart, MapPin, Pencil } from 'lucide-react'
 import { getCurrentUser, hasRole } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { EventNoticeToast } from '@/components/events/EventNoticeToast'
 import { DEFAULT_CURRENCY } from '@/lib/constants/currencies'
 import { isValidTimeZone } from '@/lib/timezone'
+import { getLocale, getTranslations } from 'next-intl/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,21 +19,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function resolvePeopleRole(person: { title: string | null; socialLinks: unknown }) {
-  if (isRecord(person.socialLinks)) {
-    const markerKind = person.socialLinks.__kind
-    const markerRole = person.socialLinks.role
-    if (markerKind === 'EVENT_PEOPLE' && (markerRole === 'SPEAKER' || markerRole === 'ORGANIZER' || markerRole === 'SPONSOR')) {
-      return markerRole
-    }
-  }
-
-  const normalizedTitle = (person.title || '').toLowerCase()
-  if (normalizedTitle.includes('sponsor')) return 'SPONSOR'
-  if (normalizedTitle.includes('organizer') || normalizedTitle.includes('organiser')) return 'ORGANIZER'
-  return 'SPEAKER'
-}
-
 function firstQueryValue(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0]
   return value
@@ -42,6 +28,8 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
   const { slug } = await params
   const query = await searchParams
   const user = await getCurrentUser()
+  const locale = await getLocale()
+  const t = await getTranslations('eventDetails')
 
   const event = await prisma.event.findUnique({
     where: { slug },
@@ -95,43 +83,51 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
   const bottomImage = event.media.find((item) => item.title === 'BOTTOM_IMAGE')?.url || null
   const coverImageSrc = `/api/events/${encodeURIComponent(event.slug)}/image?slot=cover&v=${event.updatedAt.getTime()}`
   const bottomImageSrc = `/api/events/${encodeURIComponent(event.slug)}/image?slot=bottom&v=${event.updatedAt.getTime()}`
-  const priceSuffix = currency === 'SEK' ? 'kr' : currency
+
+  const formattedMinPrice = minPrice !== null
+    ? new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(minPrice)
+    : null
 
   const displayTimeZone = isValidTimeZone(event.timezone) ? event.timezone : 'UTC'
-  const dateLabel = new Intl.DateTimeFormat(undefined, {
+  const dateLabel = new Intl.DateTimeFormat(locale, {
     month: 'long',
     day: 'numeric',
     timeZone: displayTimeZone,
   }).format(event.startDate)
-  const timeLabel = new Intl.DateTimeFormat(undefined, {
+  const timeLabel = new Intl.DateTimeFormat(locale, {
     hour: 'numeric',
     minute: '2-digit',
     timeZone: displayTimeZone,
     timeZoneName: 'short',
   }).format(event.startDate)
   const notice = firstQueryValue(query.notice)
-  const noticeMessage = notice === 'created' || notice === 'updated'
-    ? `Event ${notice}`
-    : null
+  const noticeMessage = notice === 'created'
+    ? t('noticeCreated')
+    : notice === 'updated'
+      ? t('noticeUpdated')
+      : null
 
-  const speakerNames: string[] = []
-  const organizerNames: string[] = []
-  const sponsorNames: string[] = []
-
-  for (const person of event.speakers) {
-    const role = resolvePeopleRole(person)
-    if (role === 'ORGANIZER') organizerNames.push(person.name)
-    else if (role === 'SPONSOR') sponsorNames.push(person.name)
-    else speakerNames.push(person.name)
-  }
-
-  const hasPeopleSections = speakerNames.length > 0 || organizerNames.length > 0 || sponsorNames.length > 0
-  const canEditEvent = isOwnerOrAdmin
+  type PersonCard = { id: string; name: string; title: string | null; photo: string | null; organization: string | null }
+  const speakers: PersonCard[] = event.speakers.map((person) => ({
+    id: person.id,
+    name: person.name,
+    title: person.title,
+    photo: person.photo,
+    organization:
+      isRecord(person.socialLinks) && person.socialLinks.__kind === 'EVENT_PEOPLE'
+        ? (person.socialLinks.organization as string | null) || null
+        : null,
+  }))
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-6 sm:px-6 lg:px-8">
       <EventNoticeToast message={noticeMessage} />
-      <section className="overflow-hidden rounded-xl border-4 border-blue-500 bg-gray-900">
+      <section className="relative overflow-hidden rounded-xl bg-gray-900">
         {event.coverImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -142,88 +138,179 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
         ) : (
           <div className="h-[230px] bg-gradient-to-r from-slate-700 to-slate-900 sm:h-[340px]" />
         )}
+        <button
+          type="button"
+          className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] transition hover:opacity-80"
+          aria-label={t('addToFavourites')}
+        >
+          <Heart className="h-5 w-5 text-gray-400" />
+        </button>
       </section>
 
-      <section className="border-b border-gray-300 pb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">{event.title}</h1>
-            <p className="mt-1 text-xl text-gray-800">By {event.organizer.orgName}</p>
-          </div>
-          <button
-            type="button"
-            className="rounded-full p-2 text-gray-800 transition hover:bg-gray-100"
-            aria-label="Save event"
-          >
-            <Heart className="h-6 w-6" />
-          </button>
-        </div>
+      <section className="border-b border-[#bfbfbf] pb-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
 
-        <div className="grid grid-cols-1 gap-6 pt-4 md:grid-cols-[1fr_auto] md:items-end">
-          <div className="space-y-2">
-            {event.locationType !== 'ONLINE' ? (
-              <p className="flex items-start gap-2 text-lg text-gray-900">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
-                <span className="leading-7">{locationText || 'Location TBD'}</span>
-              </p>
-            ) : (
-              <p className="text-lg text-gray-900">Online event</p>
-            )}
-            <p className="text-xl text-gray-900">
-              {dateLabel} at {timeLabel}
+          {/* Left column: event info */}
+          <div className="flex flex-1 flex-col gap-[14px]">
+            <h1
+              className="text-[48px] font-bold leading-none text-black"
+              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+            >
+              {event.title}
+            </h1>
+            <p
+              className="text-[24px] text-black"
+              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+            >
+              {t('by')} <span className="font-semibold">{event.organizer.orgName}</span>
             </p>
+            <div className="flex flex-col gap-[12px]">
+              {event.locationType !== 'ONLINE' ? (
+                <div className="flex items-start gap-[16px]">
+                  <MapPin className="mt-1 h-5 w-5 shrink-0 text-[#364153]" />
+                  <div className="flex flex-col">
+                    {event.venue && (
+                      <span
+                        className="text-[18px] font-semibold leading-7 text-[#364153]"
+                        style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                      >
+                        {event.venue}
+                      </span>
+                    )}
+                    {locationText && (
+                      <span
+                        className="text-[18px] font-normal leading-7 text-[#4a5565]"
+                        style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                      >
+                        {locationText}
+                      </span>
+                    )}
+                    {!event.venue && !locationText && (
+                      <span
+                        className="text-[18px] font-semibold leading-7 text-[#364153]"
+                        style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                      >
+                        {t('locationTBD')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-[16px]">
+                  <MapPin className="h-5 w-5 shrink-0 text-[#364153]" />
+                  <span
+                    className="text-[18px] font-semibold text-[#364153]"
+                    style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                  >
+                    {t('onlineEvent')}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-[12px]">
+                <Calendar className="h-6 w-6 shrink-0 text-[#364153]" />
+                <span
+                  className="text-[18px] leading-7 text-[#364153]"
+                  style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                >
+                  {dateLabel} {t('dateAt')} {timeLabel}
+                </span>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-end gap-4 border-t border-gray-300 pt-3 md:border-t-0 md:pt-0">
-            <div>
-              <p className="text-2xl font-medium text-gray-900">
-                {minPrice === null ? 'Free / unavailable' : `From ${minPrice.toFixed(0)} ${priceSuffix}`}
-              </p>
-              <p className="text-xs text-gray-600">
-                {dateLabel} at {timeLabel}
-              </p>
-            </div>
-            {canEditEvent ? (
-              <Link
-                href={`/dashboard/events/${event.id}/edit`}
-                className="inline-flex rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-800 transition hover:bg-gray-50"
-              >
-                Edit event
-              </Link>
-            ) : null}
+          {/* Right column: edit button (top-right) + price section */}
+          <div className="flex w-full flex-col lg:w-[247px] lg:shrink-0">
+
+            {/* Edit button (node 239-221) — pill, right-aligned, flush above price */}
+            <Link
+              href={`/dashboard/events/${event.id}/edit`}
+              className="flex w-fit items-center gap-2 self-end rounded-[50px] bg-[#e5e7eb] py-2 pl-4 pr-4 transition hover:bg-[#d1d5db]"
+              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+            >
+              <Pencil className="h-5 w-5 text-[#4a5565]" />
+              <span className="text-[16px] font-semibold leading-6 text-[#4a5565]">{t('edit')}</span>
+            </Link>
+
+            {/* Price — 2px below edit button, height 36px */}
+            <p
+              className="mt-0.5 text-[30px] font-bold leading-[36px] text-[#5c8bd9]"
+              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+            >
+              {formattedMinPrice === null ? t('free') : t('fromPrice', { price: formattedMinPrice })}
+            </p>
+
+            {/* Date — 4px below price */}
+            <p
+              className="mt-1 text-[16px] leading-6 text-[#364153]"
+              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+            >
+              {dateLabel}
+            </p>
+
+            {/* Time — directly below date, 0px gap */}
+            <p
+              className="text-[16px] leading-6 text-[#364153]"
+              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+            >
+              {timeLabel}
+            </p>
+
+            {/* Get tickets — 16px below time */}
             {event.status === 'PUBLISHED' ? (
               <Link
                 href={`/events/${event.slug}/checkout`}
-                className="inline-flex rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-600"
+                className="mt-4 flex h-[60px] items-center justify-center rounded-[14px] bg-[#5c8bd9] text-[24px] font-semibold text-white transition hover:bg-[#4a7ac8]"
+                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
               >
-                Get tickets
+                {t('getTickets')}
               </Link>
             ) : (
-              <span className="inline-flex rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-500">
-                Draft preview
+              <span className="mt-4 flex h-[60px] items-center justify-center rounded-[14px] border border-gray-300 bg-white text-[24px] font-semibold text-gray-500">
+                {t('draftPreview')}
               </span>
             )}
+
           </div>
+
         </div>
       </section>
 
       <section className="border-b border-gray-300 pb-8">
-        <h2 className="text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">Overview</h2>
+        <h2
+          className="text-[30px] font-bold leading-[36px] text-black"
+          style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+        >
+          {t('overview')}
+        </h2>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_270px]">
-          <div className="text-lg leading-8 text-gray-900">
+          <div>
             {event.description?.trim() ? (
-              <p className="whitespace-pre-line">{event.description}</p>
+              <p
+                className="whitespace-pre-line text-[18px] leading-[29.25px] text-[#364153]"
+                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+              >
+                {event.description}
+              </p>
             ) : event.descriptionHtml ? (
-              <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: event.descriptionHtml }} />
+              <div
+                className="prose max-w-none text-[18px] leading-[29.25px] text-[#364153]"
+                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                dangerouslySetInnerHTML={{ __html: event.descriptionHtml }}
+              />
             ) : (
-              <p>Event details will be announced soon.</p>
+              <p
+                className="text-[18px] leading-[29.25px] text-[#364153]"
+                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+              >
+                {t('noDescription')}
+              </p>
             )}
           </div>
 
           <div className="overflow-hidden rounded-xl border border-gray-200">
             {event.locationType === 'ONLINE' ? (
               <div className="flex h-[230px] items-center justify-center bg-gray-50 p-4 text-center text-sm text-gray-500">
-                Online event map preview not required.
+                {t('onlineMapNotRequired')}
               </div>
             ) : (
               <iframe
@@ -238,42 +325,65 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
         </div>
       </section>
 
-      {hasPeopleSections ? (
-        <section className="border-b border-gray-300 pb-8">
-          <h2 className="text-3xl font-semibold tracking-tight text-gray-900">People</h2>
-          <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {speakerNames.length > 0 ? (
-              <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="text-lg font-semibold text-gray-900">Speakers</h3>
-                <ul className="mt-3 space-y-2 text-gray-700">
-                  {speakerNames.map((name) => (
-                    <li key={`speaker-${name}`}>{name}</li>
-                  ))}
-                </ul>
+      {speakers.length > 0 ? (
+        <section className="border-b border-[#bfbfbf] pb-8">
+          <h2
+            className="text-[30px] font-bold leading-[36px] text-black"
+            style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+          >
+            {t('speakers')}
+          </h2>
+          <div className="mt-6 flex flex-wrap gap-6">
+            {speakers.map((person) => (
+              <div
+                key={person.id}
+                className="flex h-[104px] w-[302px] shrink-0 items-center gap-4 rounded-[14px] bg-[#f9fafb] pl-4 pr-4"
+              >
+                {/* Avatar */}
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#e5e7eb]">
+                  {person.photo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={person.photo}
+                      alt={person.name}
+                      className="h-full w-full rounded-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="text-[24px] font-bold leading-8 text-[#4a5565]"
+                      style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                    >
+                      {person.name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="flex flex-col">
+                  <span
+                    className="text-[18px] font-semibold leading-[28px] text-black"
+                    style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                  >
+                    {person.name}
+                  </span>
+                  {person.title && (
+                    <span
+                      className="text-[16px] font-normal leading-[24px] text-[#364153]"
+                      style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                    >
+                      {person.title}
+                    </span>
+                  )}
+                  {person.organization && (
+                    <span
+                      className="text-[14px] font-normal leading-[20px] text-[#4a5565]"
+                      style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+                    >
+                      {person.organization}
+                    </span>
+                  )}
+                </div>
               </div>
-            ) : null}
-
-            {organizerNames.length > 0 ? (
-              <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="text-lg font-semibold text-gray-900">Organizers</h3>
-                <ul className="mt-3 space-y-2 text-gray-700">
-                  {organizerNames.map((name) => (
-                    <li key={`organizer-${name}`}>{name}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-
-            {sponsorNames.length > 0 ? (
-              <div className="rounded-xl border border-gray-200 p-4">
-                <h3 className="text-lg font-semibold text-gray-900">Sponsors</h3>
-                <ul className="mt-3 space-y-2 text-gray-700">
-                  {sponsorNames.map((name) => (
-                    <li key={`sponsor-${name}`}>{name}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
+            ))}
           </div>
         </section>
       ) : null}

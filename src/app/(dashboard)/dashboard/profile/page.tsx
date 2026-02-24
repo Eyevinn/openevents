@@ -1,15 +1,17 @@
 import Link from 'next/link'
+import { getTranslations } from 'next-intl/server'
 import { prisma } from '@/lib/db'
 import { requireOrganizerProfile } from '@/lib/dashboard/organizer'
 import { EventStatusBadge } from '@/components/dashboard/EventStatusBadge'
 import { formatDateTime } from '@/lib/utils'
 
-function locationLabel(event: { venue: string | null; city: string | null; country: string | null }) {
+function locationLabel(event: { venue: string | null; city: string | null; country: string | null }, fallback: string) {
   const parts = [event.venue, event.city, event.country].filter(Boolean)
-  return parts.length > 0 ? parts.join(', ') : 'Location TBD'
+  return parts.length > 0 ? parts.join(', ') : fallback
 }
 
 export default async function OrganizerProfilePage() {
+  const t = await getTranslations('dashboard.profile')
   const { user, organizerProfile } = await requireOrganizerProfile()
   const now = new Date()
 
@@ -65,23 +67,23 @@ export default async function OrganizerProfilePage() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{organizerProfile.orgName}</h1>
-            <p className="mt-1 text-sm text-gray-600">Organizer profile</p>
+            <p className="mt-1 text-sm text-gray-600">{t('subtitle')}</p>
           </div>
           <Link
             href="/dashboard/settings"
             className="inline-flex rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Edit Profile
+            {t('editProfile')}
           </Link>
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 text-sm text-gray-700 sm:grid-cols-2">
           <div>
-            <p className="font-medium text-gray-900">Contact Email</p>
+            <p className="font-medium text-gray-900">{t('contactEmail')}</p>
             <p className="mt-1">{user.email}</p>
           </div>
           <div>
-            <p className="font-medium text-gray-900">Website</p>
+            <p className="font-medium text-gray-900">{t('website')}</p>
             <p className="mt-1">
               {organizerProfile.website ? (
                 <a
@@ -93,54 +95,54 @@ export default async function OrganizerProfilePage() {
                   {organizerProfile.website}
                 </a>
               ) : (
-                'Not set'
+                t('notSet')
               )}
             </p>
           </div>
           <div className="sm:col-span-2">
-            <p className="font-medium text-gray-900">About</p>
-            <p className="mt-1 whitespace-pre-wrap">{organizerProfile.description || 'No description yet.'}</p>
+            <p className="font-medium text-gray-900">{t('about')}</p>
+            <p className="mt-1 whitespace-pre-wrap">{organizerProfile.description || t('noDescription')}</p>
           </div>
           <div>
-            <p className="font-medium text-gray-900">LinkedIn</p>
-            <p className="mt-1">{socialLinks.linkedin || 'Not set'}</p>
+            <p className="font-medium text-gray-900">{t('linkedin')}</p>
+            <p className="mt-1">{socialLinks.linkedin || t('notSet')}</p>
           </div>
           <div>
-            <p className="font-medium text-gray-900">Twitter</p>
-            <p className="mt-1">{socialLinks.twitter || 'Not set'}</p>
+            <p className="font-medium text-gray-900">{t('twitter')}</p>
+            <p className="mt-1">{socialLinks.twitter || t('notSet')}</p>
           </div>
         </div>
       </section>
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Events</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('totalEvents')}</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{totalEvents}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Published</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('published')}</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{publishedEvents}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Drafts</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('drafts')}</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{draftEvents}</p>
         </div>
         <div className="rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Upcoming</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{t('upcoming')}</p>
           <p className="mt-2 text-2xl font-semibold text-gray-900">{upcomingEvents}</p>
         </div>
       </section>
 
       <section className="rounded-xl border border-gray-200 bg-white p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Events</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('recentEvents')}</h2>
           <Link href="/dashboard/events" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-            Manage Events
+            {t('manageEvents')}
           </Link>
         </div>
 
         {recentEvents.length === 0 ? (
-          <p className="text-sm text-gray-600">No events yet.</p>
+          <p className="text-sm text-gray-600">{t('noEvents')}</p>
         ) : (
           <div className="space-y-3">
             {recentEvents.map((event) => (
@@ -149,7 +151,7 @@ export default async function OrganizerProfilePage() {
                   <div>
                     <p className="font-medium text-gray-900">{event.title}</p>
                     <p className="mt-1 text-sm text-gray-600">{formatDateTime(event.startDate)}</p>
-                    <p className="mt-1 text-sm text-gray-600">{locationLabel(event)}</p>
+                    <p className="mt-1 text-sm text-gray-600">{locationLabel(event, t('locationTBD'))}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <EventStatusBadge status={event.status} />
@@ -157,7 +159,7 @@ export default async function OrganizerProfilePage() {
                       href={`/events/${event.slug}`}
                       className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
                     >
-                      View
+                      {t('view')}
                     </Link>
                   </div>
                 </div>
