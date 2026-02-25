@@ -3,7 +3,6 @@
 import Cropper, { Area } from 'react-easy-crop'
 import { ChangeEvent, DragEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
 import { Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FloatingToast } from '@/components/ui/floating-toast'
@@ -401,7 +400,6 @@ function buildSnapshot(form: EventFormData) {
 }
 
 export function EventForm({ mode, initialData, children }: EventFormProps) {
-  const t = useTranslations('eventForm')
   const router = useRouter()
   const bannerInputRef = useRef<HTMLInputElement | null>(null)
   const bottomInputRef = useRef<HTMLInputElement | null>(null)
@@ -536,7 +534,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     const ticket = form.ticketTypes?.[index]
     if (!ticket) return
 
-    if (ticket.id && !window.confirm(t('removeTicketConfirm'))) {
+    if (ticket.id && !window.confirm('Remove this ticket type?')) {
       return
     }
 
@@ -785,35 +783,35 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     const startUtc = dateTimeLocalInTimeZoneToUtcIso(form.startDate, timezone)
     const endUtc = dateTimeLocalInTimeZoneToUtcIso(form.endDate, timezone)
 
-    if (!form.title?.trim()) nextFieldErrors.title = t('validation.titleRequired')
+    if (!form.title?.trim()) nextFieldErrors.title = 'Enter an event title.'
 
     if (!form.startDate?.trim()) {
-      nextFieldErrors.startDate = t('validation.startRequired')
+      nextFieldErrors.startDate = 'Set start date and time.'
     } else if (!startUtc) {
-      nextFieldErrors.startDate = t('validation.startInvalid')
+      nextFieldErrors.startDate = 'Use a valid start date and time.'
     }
 
     if (!form.endDate?.trim()) {
-      nextFieldErrors.endDate = t('validation.endRequired')
+      nextFieldErrors.endDate = 'Set end date and time.'
     } else if (!endUtc) {
-      nextFieldErrors.endDate = t('validation.endInvalid')
+      nextFieldErrors.endDate = 'Use a valid end date and time.'
     }
 
     if (!form.timezone?.trim()) {
-      nextFieldErrors.timezone = t('validation.timezoneRequired')
+      nextFieldErrors.timezone = 'Select a timezone.'
     } else if (!isValidTimeZone(form.timezone)) {
-      nextFieldErrors.timezone = t('validation.timezoneInvalid')
+      nextFieldErrors.timezone = 'Select a valid IANA timezone.'
     }
 
     if (startUtc && endUtc && new Date(endUtc) <= new Date(startUtc)) {
-      nextFieldErrors.endDate = t('validation.endAfterStart')
+      nextFieldErrors.endDate = 'End time must be after start time.'
     }
 
     if (requireComplete && form.locationType !== 'ONLINE') {
-      if (!form.venue?.trim()) nextFieldErrors.venue = t('validation.venueRequired')
-      if (!form.address?.trim()) nextFieldErrors.address = t('validation.addressRequired')
-      if (!form.city?.trim()) nextFieldErrors.city = t('validation.cityRequired')
-      if (!form.country?.trim()) nextFieldErrors.country = t('validation.countryRequired')
+      if (!form.venue?.trim()) nextFieldErrors.venue = 'Enter venue.'
+      if (!form.address?.trim()) nextFieldErrors.address = 'Enter address.'
+      if (!form.city?.trim()) nextFieldErrors.city = 'Enter city.'
+      if (!form.country?.trim()) nextFieldErrors.country = 'Enter country.'
     }
 
     if (
@@ -821,11 +819,11 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       (form.locationType === 'ONLINE' || form.locationType === 'HYBRID') &&
       !form.onlineUrl?.trim()
     ) {
-      nextFieldErrors.onlineUrl = t('validation.onlineUrlRequired')
+      nextFieldErrors.onlineUrl = 'Enter an online URL.'
     }
 
     if (requireComplete && !form.description?.trim()) {
-      nextFieldErrors.description = t('validation.descriptionRequired')
+      nextFieldErrors.description = 'Add an event description.'
     }
 
     const ticketTypes = form.ticketTypes || []
@@ -846,11 +844,11 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         continue
       }
 
-      if (!name) rowErrors.name = t('validation.ticketNameRequired')
-      if (price === null || price < 0) rowErrors.price = t('validation.ticketPriceInvalid')
-      if (!isSupportedCurrency(currency)) rowErrors.currency = t('validation.ticketCurrencyInvalid')
+      if (!name) rowErrors.name = 'Enter ticket name.'
+      if (price === null || price < 0) rowErrors.price = 'Enter a valid price (0 or greater).'
+      if (!isSupportedCurrency(currency)) rowErrors.currency = 'Select a supported currency.'
       if (maxCapacity !== null && (!Number.isInteger(maxCapacity) || maxCapacity < 1)) {
-        rowErrors.capacity = t('validation.ticketCapacityInvalid')
+        rowErrors.capacity = 'Enter a whole number greater than 0 or leave empty.'
       }
 
       if (name) {
@@ -867,30 +865,30 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     for (const duplicateIndexes of seenTicketNames.values()) {
       if (duplicateIndexes.length < 2) continue
       for (const index of duplicateIndexes) {
-        nextTicketErrors[index].name = t('validation.ticketNamesUnique')
+        nextTicketErrors[index].name = 'Ticket names must be unique.'
       }
     }
 
     if (requireComplete && ticketTypes.length < 1) {
-      nextGeneralErrors.push(t('validation.addTicketBeforePublish'))
+      nextGeneralErrors.push('Add at least one ticket type before publishing.')
     }
 
     if (requireComplete && ticketTypes.length > 0 && !hasPublishableTicketType) {
-      nextGeneralErrors.push(t('validation.fixTicketDetails'))
+      nextGeneralErrors.push('Fix ticket type details before publishing.')
     }
 
     const hasTicketErrors = nextTicketErrors.some((row) => Object.keys(row).length > 0)
 
     if (action === 'publish' && Object.keys(nextFieldErrors).length > 0) {
-      nextGeneralErrors.push(t('validation.fixHighlightedPublish'))
+      nextGeneralErrors.push('Cannot publish yet. Fix the highlighted fields.')
     }
 
     if (action === 'save' && (Object.keys(nextFieldErrors).length > 0 || hasTicketErrors)) {
-      nextGeneralErrors.push(t('validation.fixHighlightedSave'))
+      nextGeneralErrors.push('Please fix the highlighted fields before saving.')
     }
 
     if (action === 'publish' && hasTicketErrors) {
-      nextGeneralErrors.push(t('validation.fixTicketFieldsPublish'))
+      nextGeneralErrors.push('Cannot publish yet. Fix ticket type fields.')
     }
 
     return {
@@ -1182,7 +1180,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       }
 
       if (mode === 'edit') {
-        setToast({ message: action === 'publish' ? t('eventPublished') : t('eventUpdated'), tone: 'success' })
+        setToast({ message: action === 'publish' ? 'Event published' : 'Event updated', tone: 'success' })
         router.refresh()
         return
       }
@@ -1222,7 +1220,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       Boolean(croppedImageFiles.coverImage) ||
       Boolean(croppedImageFiles.bottomImage)
 
-    if (isDirty && !window.confirm(t('discardConfirm'))) {
+    if (isDirty && !window.confirm('Discard unsaved changes?')) {
       return
     }
 
@@ -1259,7 +1257,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
   return (
     <div className="space-y-8 px-1 sm:px-0">
       <h2 className="text-3xl font-semibold tracking-tight text-gray-900">
-        {mode === 'create' ? t('titleCreate') : t('titleEdit')}
+        {mode === 'create' ? 'Create Event Info' : 'Edit Event Info'}
       </h2>
 
       {generalErrors.length > 0 ? (
@@ -1289,7 +1287,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         onDrop={(event) => {
           void onImageDrop(event, 'coverImage')
         }}
-        aria-label={bannerImageSrc ? t('changeBannerAriaLabel') : t('addBannerAriaLabel')}
+        aria-label={bannerImageSrc ? 'Change banner image' : 'Add banner image'}
         className={`group relative block aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-xl border-4 bg-gray-900 text-left transition-shadow duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
           isBannerDropActive
             ? 'border-blue-500 ring-2 ring-blue-500/40'
@@ -1302,7 +1300,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={bannerImageSrc}
-            alt={t('bannerAlt')}
+            alt="Event banner"
             className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.01] group-hover:brightness-95 group-focus-visible:brightness-95"
           />
         ) : (
@@ -1316,7 +1314,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             }`}
           >
             <span className="inline-flex rounded-md bg-black/60 px-3 py-1.5 text-sm font-medium text-white">
-              {isUploadingBanner ? t('uploading') : isBannerDropActive ? t('dropImage', { target: t('bannerTarget') }) : t('clickToChange', { target: t('bannerTarget') })}
+              {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop banner image' : 'Click to change banner image'}
             </span>
           </div>
         ) : (
@@ -1329,10 +1327,10 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
           >
             <Upload className="h-5 w-5 text-white/90" aria-hidden="true" />
             <p className="text-base font-medium text-white">
-              {isUploadingBanner ? t('uploading') : isBannerDropActive ? t('dropImage', { target: t('bannerTarget') }) : t('clickToAdd', { target: t('bannerTarget') })}
+              {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop banner image' : 'Click to add banner image'}
             </p>
             <p className="text-xs text-gray-200">
-              {isUploadingBanner ? t('pleaseWait') : isBannerDropActive ? t('releaseToUpload') : t('orDragAndDrop')}
+              {isUploadingBanner ? 'Please wait...' : isBannerDropActive ? 'Release to upload' : 'or drag and drop'}
             </p>
           </div>
         )}
@@ -1349,12 +1347,12 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                 void openExistingCrop('coverImage', bannerImageSrc)
               }}
             >
-              {t('editCropBanner')}
+              Edit / Crop banner
             </Button>
           ) : null}
           {croppedImageFiles.coverImage ? (
             <Button type="button" variant="outline" onClick={() => void resetImageToOriginal('coverImage')}>
-              {t('resetBanner')}
+              Reset banner
             </Button>
           ) : null}
         </div>
@@ -1362,14 +1360,14 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       {fieldErrors.coverImage ? <p className="text-sm text-red-600">{fieldErrors.coverImage}</p> : null}
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">{t('eventHeaderSection')}</h3>
+        <h3 className="text-3xl font-semibold text-gray-900">Event Header</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
-            <Label htmlFor="title" required>{t('titleLabel')}</Label>
+            <Label htmlFor="title" required>Title</Label>
             <Input id="title" value={form.title} error={fieldErrors.title} onChange={(e) => updateField('title', e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="startDate" required>{t('startLabel')}</Label>
+            <Label htmlFor="startDate" required>Start</Label>
             <Input
               id="startDate"
               type="datetime-local"
@@ -1379,7 +1377,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             />
           </div>
           <div>
-            <Label htmlFor="endDate" required>{t('endLabel')}</Label>
+            <Label htmlFor="endDate" required>End</Label>
             <Input
               id="endDate"
               type="datetime-local"
@@ -1389,7 +1387,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             />
           </div>
           <div>
-            <Label htmlFor="timezone" required>{t('timezoneLabel')}</Label>
+            <Label htmlFor="timezone" required>Timezone</Label>
             <select
               id="timezone"
               className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm"
@@ -1403,26 +1401,26 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             {fieldErrors.timezone ? <p className="mt-1 text-sm text-red-600">{fieldErrors.timezone}</p> : null}
           </div>
           <div>
-            <Label htmlFor="locationType" required>{t('locationTypeLabel')}</Label>
+            <Label htmlFor="locationType" required>Location Type</Label>
             <select
               id="locationType"
               className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm"
               value={form.locationType}
               onChange={(e) => updateField('locationType', e.target.value as EventFormData['locationType'])}
             >
-              <option value="PHYSICAL">{t('locationPhysical')}</option>
-              <option value="ONLINE">{t('locationOnline')}</option>
-              <option value="HYBRID">{t('locationHybrid')}</option>
+              <option value="PHYSICAL">Physical</option>
+              <option value="ONLINE">Online</option>
+              <option value="HYBRID">Hybrid</option>
             </select>
           </div>
           {form.locationType !== 'ONLINE' ? (
             <>
               <div>
-                <Label htmlFor="venue" required>{t('venueLabel')}</Label>
+                <Label htmlFor="venue" required>Venue</Label>
                 <Input id="venue" value={form.venue || ''} error={fieldErrors.venue} onChange={(e) => updateField('venue', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="address" required>{t('addressLabel')}</Label>
+                <Label htmlFor="address" required>Address</Label>
                 <Input
                   id="address"
                   value={form.address || ''}
@@ -1431,26 +1429,26 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                 />
               </div>
               <div>
-                <Label htmlFor="city" required>{t('cityLabel')}</Label>
+                <Label htmlFor="city" required>City</Label>
                 <Input id="city" value={form.city || ''} error={fieldErrors.city} onChange={(e) => updateField('city', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="state">{t('stateLabel')}</Label>
+                <Label htmlFor="state">State</Label>
                 <Input id="state" value={form.state || ''} onChange={(e) => updateField('state', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="country" required>{t('countryLabel')}</Label>
+                <Label htmlFor="country" required>Country</Label>
                 <Input id="country" value={form.country || ''} error={fieldErrors.country} onChange={(e) => updateField('country', e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="postalCode">{t('postalCodeLabel')}</Label>
+                <Label htmlFor="postalCode">Postal Code</Label>
                 <Input id="postalCode" value={form.postalCode || ''} onChange={(e) => updateField('postalCode', e.target.value)} />
               </div>
             </>
           ) : null}
           {(form.locationType === 'ONLINE' || form.locationType === 'HYBRID') ? (
             <div className="md:col-span-2">
-              <Label htmlFor="onlineUrl" required>{t('onlineUrlLabel')}</Label>
+              <Label htmlFor="onlineUrl" required>Online URL</Label>
               <Input id="onlineUrl" value={form.onlineUrl || ''} error={fieldErrors.onlineUrl} onChange={(e) => updateField('onlineUrl', e.target.value)} />
             </div>
           ) : null}
@@ -1458,9 +1456,9 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">{t('overviewSection')}</h3>
+        <h3 className="text-3xl font-semibold text-gray-900">Overview</h3>
         <div>
-          <Label htmlFor="description" required>{t('descriptionLabel')}</Label>
+          <Label htmlFor="description" required>Description</Label>
           <textarea
             id="description"
             className="min-h-40 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
@@ -1472,14 +1470,14 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">{t('programSection')}</h3>
+        <h3 className="text-3xl font-semibold text-gray-900">Program</h3>
         <p className="text-sm text-gray-600">
-          {children ? t('programManage') : t('programAddNow')}
+          {children ? 'Manage people and schedule in one place so agenda items can be linked to speakers.' : 'Add program people now. After your first save, you can manage detailed speakers and agenda here.'}
         </p>
         <div className={`grid grid-cols-1 gap-4 ${mode === 'create' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
           {mode === 'create' ? (
             <div>
-              <Label htmlFor="speakerNames">{t('speakersLabel')}</Label>
+              <Label htmlFor="speakerNames">Speakers</Label>
               <Input
                 id="speakerNames"
                 placeholder="Jane Doe, John Doe"
@@ -1489,7 +1487,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             </div>
           ) : null}
           <div>
-            <Label htmlFor="organizerNames">{t('jobTitleLabel')}</Label>
+            <Label htmlFor="organizerNames">Job title</Label>
             <Input
               id="organizerNames"
               placeholder="Developer, Consultant"
@@ -1498,7 +1496,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             />
           </div>
           <div>
-            <Label htmlFor="sponsorNames">{t('organizationLabel')}</Label>
+            <Label htmlFor="sponsorNames">Organization</Label>
             <Input
               id="sponsorNames"
               placeholder="Tech Corp, Innovation Inc"
@@ -1517,15 +1515,15 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-3xl font-semibold text-gray-900">{t('ticketTypesSection')}</h3>
+          <h3 className="text-3xl font-semibold text-gray-900">Ticket Types</h3>
           <Button type="button" variant="outline" onClick={addTicketType}>
-            {t('addTicketType')}
+            + Add ticket type
           </Button>
         </div>
 
         {(form.ticketTypes || []).length < 1 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-            {t('noTicketTypes')}
+            No ticket types yet. Add at least one before publishing.
           </div>
         ) : null}
 
@@ -1540,14 +1538,14 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             return (
               <div key={ticketType.id || `new-ticket-type-${index}`} className="rounded-lg border border-gray-200 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-gray-800">{t('ticketTypeIndex', { index: index + 1 })}</p>
+                  <p className="text-sm font-semibold text-gray-800">{`Ticket Type ${index + 1}`}</p>
                   <Button type="button" variant="outline" onClick={() => removeTicketType(index)}>
-                    {t('removeTicketType')}
+                    Remove
                   </Button>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                   <div className="md:col-span-2">
-                    <Label htmlFor={`ticketTypeName-${index}`} required>{t('ticketNameLabel')}</Label>
+                    <Label htmlFor={`ticketTypeName-${index}`} required>Ticket Name</Label>
                     <Input
                       id={`ticketTypeName-${index}`}
                       value={ticketType.name}
@@ -1557,7 +1555,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`ticketPrice-${index}`} required>{t('ticketPriceLabel')}</Label>
+                    <Label htmlFor={`ticketPrice-${index}`} required>Ticket Price</Label>
                     <Input
                       id={`ticketPrice-${index}`}
                       type="number"
@@ -1570,7 +1568,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                     />
                   </div>
                   <div>
-                    <Label htmlFor={`ticketCurrency-${index}`} required>{t('currencyLabel')}</Label>
+                    <Label htmlFor={`ticketCurrency-${index}`} required>Currency</Label>
                     <select
                       id={`ticketCurrency-${index}`}
                       className={`h-10 w-full rounded-md border px-3 text-sm ${
@@ -1580,19 +1578,19 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                       onChange={(event) => updateTicketTypeField(index, 'currency', event.target.value)}
                     >
                       {legacyCurrency ? (
-                        <option value={legacyCurrency}>{t('legacyCurrency', { currency: legacyCurrency })}</option>
+                        <option value={legacyCurrency}>{`${legacyCurrency} (legacy unsupported)`}</option>
                       ) : null}
                       {SUPPORTED_CURRENCIES.map((currency) => (
                         <option key={currency} value={currency}>{currency}</option>
                       ))}
                     </select>
                     {legacyCurrency ? (
-                      <p className="mt-1 text-sm text-amber-700">{t('selectSupportedCurrency')}</p>
+                      <p className="mt-1 text-sm text-amber-700">Select a supported currency before publishing.</p>
                     ) : null}
                     {rowErrors.currency ? <p className="mt-1 text-sm text-red-600">{rowErrors.currency}</p> : null}
                   </div>
                   <div>
-                    <Label htmlFor={`ticketCapacity-${index}`}>{t('capacityLabel')}</Label>
+                    <Label htmlFor={`ticketCapacity-${index}`}>Capacity (optional)</Label>
                     <Input
                       id={`ticketCapacity-${index}`}
                       type="number"
@@ -1601,7 +1599,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                       value={ticketType.capacity}
                       error={rowErrors.capacity}
                       onChange={(event) => updateTicketTypeField(index, 'capacity', event.target.value)}
-                      placeholder={t('capacityPlaceholder')}
+                      placeholder="Leave empty for unlimited"
                     />
                   </div>
                 </div>
@@ -1612,7 +1610,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">{t('bottomVisualSection')}</h3>
+        <h3 className="text-3xl font-semibold text-gray-900">Bottom Visual</h3>
         <input
           ref={bottomInputRef}
           id="bottomImageUpload"
@@ -1632,7 +1630,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
           onDrop={(event) => {
             void onImageDrop(event, 'bottomImage')
           }}
-          aria-label={bottomImageSrc ? t('changeBottomAriaLabel') : t('addBottomAriaLabel')}
+          aria-label={bottomImageSrc ? 'Change bottom visual image' : 'Add bottom visual image'}
           className={`group relative block aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-xl border-4 bg-gray-900 text-left transition-shadow duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
             isBottomDropActive
               ? 'border-blue-500 ring-2 ring-blue-500/40'
@@ -1645,7 +1643,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={bottomImageSrc}
-              alt={t('bottomAlt')}
+              alt="Event bottom visual"
               className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.01] group-hover:brightness-95 group-focus-visible:brightness-95"
             />
           ) : (
@@ -1659,7 +1657,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
               }`}
             >
               <span className="inline-flex rounded-md bg-black/60 px-3 py-1.5 text-sm font-medium text-white">
-                {isUploadingBottom ? t('uploading') : isBottomDropActive ? t('dropImage', { target: t('bottomTarget') }) : t('clickToChange', { target: t('bottomTarget') })}
+                {isUploadingBottom ? 'Uploading...' : isBottomDropActive ? 'Drop bottom visual' : 'Click to change bottom visual'}
               </span>
             </div>
           ) : (
@@ -1672,10 +1670,10 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             >
               <Upload className="h-5 w-5 text-white/90" aria-hidden="true" />
               <p className="text-base font-medium text-white">
-                {isUploadingBottom ? t('uploading') : isBottomDropActive ? t('dropImage', { target: t('bottomTarget') }) : t('clickToAdd', { target: t('bottomTarget') })}
+                {isUploadingBottom ? 'Uploading...' : isBottomDropActive ? 'Drop bottom visual' : 'Click to add bottom visual'}
               </p>
               <p className="text-xs text-gray-200">
-                {isUploadingBottom ? t('pleaseWait') : isBottomDropActive ? t('releaseToUpload') : t('orDragAndDrop')}
+                {isUploadingBottom ? 'Please wait...' : isBottomDropActive ? 'Release to upload' : 'or drag and drop'}
               </p>
             </div>
           )}
@@ -1692,12 +1690,12 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                   void openExistingCrop('bottomImage', bottomImageSrc)
                 }}
               >
-                {t('editCropBottom')}
+                Edit / Crop bottom image
               </Button>
             ) : null}
             {croppedImageFiles.bottomImage ? (
               <Button type="button" variant="outline" onClick={() => void resetImageToOriginal('bottomImage')}>
-                {t('resetBottom')}
+                Reset bottom image
               </Button>
             ) : null}
           </div>
@@ -1706,19 +1704,19 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Label htmlFor="visibility">{t('visibilityLabel')}</Label>
+            <Label htmlFor="visibility">Visibility</Label>
             <select
               id="visibility"
               className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm"
               value={form.visibility}
               onChange={(e) => updateField('visibility', e.target.value as EventFormData['visibility'])}
             >
-              <option value="PUBLIC">{t('visibilityPublic')}</option>
-              <option value="PRIVATE">{t('visibilityPrivate')}</option>
+              <option value="PUBLIC">Public</option>
+              <option value="PRIVATE">Private</option>
             </select>
           </div>
           <div>
-            <Label htmlFor="cancellationDeadlineHours">{t('cancellationDeadlineLabel')}</Label>
+            <Label htmlFor="cancellationDeadlineHours">Cancellation Deadline (hours)</Label>
             <Input
               id="cancellationDeadlineHours"
               type="number"
@@ -1728,7 +1726,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             />
           </div>
           <div className="md:col-span-2">
-            <Label htmlFor="categoryIds">{t('categoryIdsLabel')}</Label>
+            <Label htmlFor="categoryIds">Category IDs (comma separated)</Label>
             <Input
               id="categoryIds"
               value={form.categoryIds?.join(',') || ''}
@@ -1752,19 +1750,19 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
       <div className="flex flex-wrap gap-3">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          {t('cancelButton')}
+          Cancel
         </Button>
         {isPublishedEvent ? (
           <Button onClick={() => submit('save')} isLoading={isSubmitting}>
-            {t('saveChangesButton')}
+            Save changes
           </Button>
         ) : (
           <>
             <Button onClick={() => submit('save')} isLoading={isSubmitting}>
-              {t('saveDraftButton')}
+              Save draft
             </Button>
             <Button variant="outline" onClick={() => submit('publish')} isLoading={isSubmitting}>
-              {t('publishButton')}
+              Publish event
             </Button>
           </>
         )}
@@ -1773,8 +1771,8 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       {cropSession ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-3xl rounded-xl bg-white p-4 shadow-xl">
-            <h4 className="text-lg font-semibold text-gray-900">{t('cropTitle')}</h4>
-            <p className="mt-1 text-sm text-gray-600">{t('cropDescription')}</p>
+            <h4 className="text-lg font-semibold text-gray-900">Edit image crop</h4>
+            <p className="mt-1 text-sm text-gray-600">Adjust zoom and position, then apply crop.</p>
 
             <div className="relative mt-4 h-[420px] w-full overflow-hidden rounded-lg bg-gray-900">
               <Cropper
@@ -1789,7 +1787,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
             </div>
 
             <div className="mt-4">
-              <Label htmlFor="cropZoom">{t('zoomLabel')}</Label>
+              <Label htmlFor="cropZoom">Zoom</Label>
               <input
                 id="cropZoom"
                 type="range"
@@ -1804,20 +1802,20 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
 
             <div className="mt-5 flex flex-wrap gap-3">
               <Button type="button" variant="outline" onClick={closeCropper}>
-                {t('closeButton')}
+                Close
               </Button>
               {cropSession.targetField === 'coverImage' && croppedImageFiles.coverImage ? (
                 <Button type="button" variant="outline" onClick={() => void resetImageToOriginal('coverImage')}>
-                  {t('resetToOriginal')}
+                  Reset to original
                 </Button>
               ) : null}
               {cropSession.targetField === 'bottomImage' && croppedImageFiles.bottomImage ? (
                 <Button type="button" variant="outline" onClick={() => void resetImageToOriginal('bottomImage')}>
-                  {t('resetToOriginal')}
+                  Reset to original
                 </Button>
               ) : null}
               <Button type="button" onClick={applyCrop} isLoading={isApplyingCrop}>
-                {t('applyCropButton')}
+                Apply crop
               </Button>
             </div>
           </div>

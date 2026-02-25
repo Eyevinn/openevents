@@ -2,13 +2,10 @@ import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { EventList } from '@/components/events/EventList'
 import { HeroSearchBar } from '@/components/events/HeroSearchBar'
-import { getTranslations } from 'next-intl/server'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const t = await getTranslations('home')
-
   const categories = await prisma.category.findMany({
     select: { id: true, name: true, slug: true },
     orderBy: { name: 'asc' },
@@ -50,7 +47,7 @@ export default async function HomePage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/hero-image.jpg"
-              alt={t('heroAlt')}
+              alt="Events built for business"
               className="h-[220px] w-full object-cover sm:h-[300px] md:h-[360px] lg:h-[420px]"
             />
             <div className="absolute left-6 top-[12%] rounded-[20px] border border-[rgba(255,255,255,0.31)] bg-[rgba(217,217,217,0.10)] px-6 py-4 backdrop-blur-[17.5px] sm:left-8 md:left-10">
@@ -58,7 +55,7 @@ export default async function HomePage() {
                 className="text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl lg:text-[55px]"
                 style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
               >
-                {t('heroTitle')}
+                Events built for business
               </h1>
             </div>
           </div>
@@ -75,14 +72,14 @@ export default async function HomePage() {
               className="text-[35px] font-bold leading-normal text-black"
               style={{ fontFamily: 'var(--font-outfit)' }}
             >
-              {t('upcomingEvents')}
+              Upcoming events
             </h2>
             <Link
               href="/events"
               className="inline-flex items-center justify-center rounded-[10px] bg-[#5c8bd9] px-[15px] py-[10px] text-[16px] font-semibold text-white transition-colors hover:bg-[#4a7ac8]"
               style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
             >
-              {t('viewAllEvents')}
+              View all events
             </Link>
           </div>
           <EventList events={featuredEvents} />
@@ -93,10 +90,10 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-3xl font-bold text-gray-900">
-              {t('featuresTitle')}
+              Everything You Need to Run Events
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              {t('featuresSubtitle')}
+              Powerful features for organizers and attendees alike
             </p>
           </div>
 
@@ -108,10 +105,10 @@ export default async function HomePage() {
                 </svg>
               </div>
               <h3 className="mt-6 text-lg font-semibold text-gray-900">
-                {t('easyCreationTitle')}
+                Easy Event Creation
               </h3>
               <p className="mt-2 text-gray-600">
-                {t('easyCreationDescription')}
+                Create beautiful event pages with all the details your attendees need. Add agendas, speakers, and media.
               </p>
             </div>
 
@@ -122,10 +119,10 @@ export default async function HomePage() {
                 </svg>
               </div>
               <h3 className="mt-6 text-lg font-semibold text-gray-900">
-                {t('flexibleTicketingTitle')}
+                Flexible Ticketing
               </h3>
               <p className="mt-2 text-gray-600">
-                {t('flexibleTicketingDescription')}
+                Multiple ticket types, discount codes, and capacity management. Accept payments or offer free tickets.
               </p>
             </div>
 
@@ -136,10 +133,10 @@ export default async function HomePage() {
                 </svg>
               </div>
               <h3 className="mt-6 text-lg font-semibold text-gray-900">
-                {t('powerfulAnalyticsTitle')}
+                Powerful Analytics
               </h3>
               <p className="mt-2 text-gray-600">
-                {t('powerfulAnalyticsDescription')}
+                Track ticket sales, revenue, and attendee information. Make data-driven decisions for your events.
               </p>
             </div>
           </div>

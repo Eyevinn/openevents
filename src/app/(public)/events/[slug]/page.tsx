@@ -7,7 +7,6 @@ import { EventNoticeToast } from '@/components/events/EventNoticeToast'
 import { DEFAULT_CURRENCY } from '@/lib/constants/currencies'
 import { CHECKOUT_UNAVAILABLE_NOTICE } from '@/lib/orders/checkoutAvailability'
 import { isValidTimeZone } from '@/lib/timezone'
-import { getLocale, getTranslations } from 'next-intl/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,8 +28,6 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
   const { slug } = await params
   const query = await searchParams
   const user = await getCurrentUser()
-  const locale = await getLocale()
-  const t = await getTranslations('eventDetails')
 
   const event = await prisma.event.findUnique({
     where: { slug },
@@ -86,7 +83,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
   const bottomImageSrc = `/api/events/${encodeURIComponent(event.slug)}/image?slot=bottom&v=${event.updatedAt.getTime()}`
 
   const formattedMinPrice = minPrice !== null
-    ? new Intl.NumberFormat(locale, {
+    ? new Intl.NumberFormat('en', {
         style: 'currency',
         currency,
         minimumFractionDigits: 0,
@@ -95,12 +92,12 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
     : null
 
   const displayTimeZone = isValidTimeZone(event.timezone) ? event.timezone : 'UTC'
-  const dateLabel = new Intl.DateTimeFormat(locale, {
+  const dateLabel = new Intl.DateTimeFormat('en', {
     month: 'long',
     day: 'numeric',
     timeZone: displayTimeZone,
   }).format(event.startDate)
-  const timeLabel = new Intl.DateTimeFormat(locale, {
+  const timeLabel = new Intl.DateTimeFormat('en', {
     hour: 'numeric',
     minute: '2-digit',
     timeZone: displayTimeZone,
@@ -108,17 +105,17 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
   }).format(event.startDate)
   const notice = firstQueryValue(query.notice)
   const noticeMessage = notice === 'created'
-    ? t('noticeCreated')
+    ? 'Event created'
     : notice === 'updated'
-      ? t('noticeUpdated')
+      ? 'Event updated'
       : null
   const checkoutUnavailableMessage =
     notice === CHECKOUT_UNAVAILABLE_NOTICE.EVENT_NOT_PUBLISHED
-      ? t('checkoutUnavailableNotPublished')
+      ? 'Checkout is unavailable because this event is not open for ticket sales.'
       : notice === CHECKOUT_UNAVAILABLE_NOTICE.EVENT_STARTED
-        ? t('checkoutUnavailableStarted')
+        ? 'Checkout is unavailable because this event has already started.'
         : notice === CHECKOUT_UNAVAILABLE_NOTICE.NO_PURCHASABLE_TICKETS
-          ? t('checkoutUnavailableNoTickets')
+          ? 'Checkout is unavailable because there are no tickets currently on sale.'
           : null
 
   type PersonCard = { id: string; name: string; title: string | null; photo: string | null; organization: string | null }
@@ -158,7 +155,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
         <button
           type="button"
           className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] transition hover:opacity-80"
-          aria-label={t('addToFavourites')}
+          aria-label="Add to favourites"
         >
           <Heart className="h-5 w-5 text-gray-400" />
         </button>
@@ -179,7 +176,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
               className="text-[24px] text-black"
               style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
             >
-              {t('by')} <span className="font-semibold">{event.organizer.orgName}</span>
+              By <span className="font-semibold">{event.organizer.orgName}</span>
             </p>
             <div className="flex flex-col gap-[12px]">
               {event.locationType !== 'ONLINE' ? (
@@ -207,7 +204,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
                         className="text-[18px] font-semibold leading-7 text-[#364153]"
                         style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
                       >
-                        {t('locationTBD')}
+                        Location TBD
                       </span>
                     )}
                   </div>
@@ -219,7 +216,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
                     className="text-[18px] font-semibold text-[#364153]"
                     style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
                   >
-                    {t('onlineEvent')}
+                    Online event
                   </span>
                 </div>
               )}
@@ -229,7 +226,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
                   className="text-[18px] leading-7 text-[#364153]"
                   style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
                 >
-                  {dateLabel} {t('dateAt')} {timeLabel}
+                  {dateLabel} at {timeLabel}
                 </span>
               </div>
             </div>
@@ -245,7 +242,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
               style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
             >
               <Pencil className="h-5 w-5 text-[#4a5565]" />
-              <span className="text-[16px] font-semibold leading-6 text-[#4a5565]">{t('edit')}</span>
+              <span className="text-[16px] font-semibold leading-6 text-[#4a5565]">Edit</span>
             </Link>
 
             {/* Price — 2px below edit button, height 36px */}
@@ -253,7 +250,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
               className="mt-0.5 text-[30px] font-bold leading-[36px] text-[#5c8bd9]"
               style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
             >
-              {formattedMinPrice === null ? t('free') : t('fromPrice', { price: formattedMinPrice })}
+              {formattedMinPrice === null ? 'Free' : `From ${formattedMinPrice}`}
             </p>
 
             {/* Date — 4px below price */}
@@ -279,11 +276,11 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
                 className="mt-4 flex h-[60px] items-center justify-center rounded-[14px] bg-[#5c8bd9] text-[24px] font-semibold text-white transition hover:bg-[#4a7ac8]"
                 style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
               >
-                {t('getTickets')}
+                Get tickets
               </Link>
             ) : (
               <span className="mt-4 flex h-[60px] items-center justify-center rounded-[14px] border border-gray-300 bg-white text-[24px] font-semibold text-gray-500">
-                {t('draftPreview')}
+                Draft preview
               </span>
             )}
 
@@ -297,7 +294,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
           className="text-[30px] font-bold leading-[36px] text-black"
           style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
         >
-          {t('overview')}
+          Overview
         </h2>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_270px]">
           <div>
@@ -319,7 +316,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
                 className="text-[18px] leading-[29.25px] text-[#364153]"
                 style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
               >
-                {t('noDescription')}
+                Event details will be announced soon.
               </p>
             )}
           </div>
@@ -327,7 +324,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
           <div className="overflow-hidden rounded-xl border border-gray-200">
             {event.locationType === 'ONLINE' ? (
               <div className="flex h-[230px] items-center justify-center bg-gray-50 p-4 text-center text-sm text-gray-500">
-                {t('onlineMapNotRequired')}
+                Online event map preview not required.
               </div>
             ) : (
               <iframe
@@ -348,7 +345,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
             className="text-[30px] font-bold leading-[36px] text-black"
             style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
           >
-            {t('speakers')}
+            Speakers
           </h2>
           <div className="mt-6 flex flex-wrap gap-6">
             {speakers.map((person) => (

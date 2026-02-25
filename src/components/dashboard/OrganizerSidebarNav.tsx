@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import { useTranslations } from 'next-intl'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
@@ -27,13 +26,12 @@ function isActive(pathname: string, item: NavItem): boolean {
 }
 
 export function OrganizerSidebarNav() {
-  const t = useTranslations('dashboard.sidebarNav')
   const pathname = usePathname()
 
   const navItems: NavItem[] = [
-    { id: 'scan', href: '/dashboard/scan', label: t('scanTickets') },
-    { id: 'overview', href: '/dashboard', label: t('overview') },
-    { id: 'events', href: '/dashboard/events', label: t('events') },
+    { id: 'scan', href: '/dashboard/scan', label: 'Scan Tickets' },
+    { id: 'overview', href: '/dashboard', label: 'Overview' },
+    { id: 'events', href: '/dashboard/events', label: 'Events' },
   ]
 
   const profileSectionActive = pathname === '/dashboard/profile' || pathname.startsWith('/dashboard/settings')
@@ -71,12 +69,12 @@ export function OrganizerSidebarNav() {
             )}
             aria-current={pathname === '/dashboard/profile' ? 'page' : undefined}
           >
-            {t('profile')}
+            Profile
           </Link>
           <button
             type="button"
             className="rounded-md p-2 text-gray-600 transition hover:bg-gray-50"
-            aria-label={profileOpen ? t('collapseProfile') : t('expandProfile')}
+            aria-label={profileOpen ? 'Collapse profile links' : 'Expand profile links'}
             aria-expanded={profileOpen}
             onClick={() => {
               if (profileSectionActive) {
@@ -100,7 +98,7 @@ export function OrganizerSidebarNav() {
               )}
               aria-current={pathname === '/dashboard/settings' ? 'page' : undefined}
             >
-              {t('profileSettings')}
+              Profile Settings
             </Link>
             <Link
               href="/dashboard/settings/account"
@@ -110,7 +108,7 @@ export function OrganizerSidebarNav() {
               )}
               aria-current={pathname.startsWith('/dashboard/settings/account') ? 'page' : undefined}
             >
-              {t('accountSettings')}
+              Account Settings
             </Link>
           </div>
         ) : null}

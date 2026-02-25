@@ -11,11 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useTranslations } from 'next-intl'
 
 function PasswordStrengthIndicator({ password }: { password: string }) {
-  const t = useTranslations('auth.register')
-
   const getStrength = (pass: string): { score: number; label: string; color: string } => {
     let score = 0
     if (pass.length >= 8) score++
@@ -25,10 +22,10 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
     if (/[0-9]/.test(pass)) score++
     if (/[^A-Za-z0-9]/.test(pass)) score++
 
-    if (score <= 2) return { score: 1, label: t('strengthWeak'), color: 'bg-red-500' }
-    if (score <= 4) return { score: 2, label: t('strengthFair'), color: 'bg-yellow-500' }
-    if (score <= 5) return { score: 3, label: t('strengthGood'), color: 'bg-blue-500' }
-    return { score: 4, label: t('strengthStrong'), color: 'bg-green-500' }
+    if (score <= 2) return { score: 1, label: 'Weak', color: 'bg-red-500' }
+    if (score <= 4) return { score: 2, label: 'Fair', color: 'bg-yellow-500' }
+    if (score <= 5) return { score: 3, label: 'Good', color: 'bg-blue-500' }
+    return { score: 4, label: 'Strong', color: 'bg-green-500' }
   }
 
   const strength = getStrength(password)
@@ -53,7 +50,7 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
         strength.score <= 3 ? 'text-blue-600' :
         'text-green-600'
       }`}>
-        {t('passwordStrengthLabel', { strength: strength.label })}
+        {`Password strength: ${strength.label}`}
       </p>
     </div>
   )
@@ -61,7 +58,6 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
 
 export function RegisterForm() {
   const router = useRouter()
-  const t = useTranslations('auth.register')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -87,7 +83,7 @@ export function RegisterForm() {
 
   const onSubmit = async (data: RegisterInput) => {
     if (!acceptedTerms) {
-      setError(t('acceptTermsError'))
+      setError('Please accept the terms and conditions')
       return
     }
 
@@ -104,13 +100,13 @@ export function RegisterForm() {
       const result = await response.json()
 
       if (!response.ok) {
-        setError(result.message || t('registrationFailed'))
+        setError(result.message || 'Registration failed')
         return
       }
 
       setSuccess(true)
     } catch {
-      setError(t('unexpectedError'))
+      setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -120,9 +116,9 @@ export function RegisterForm() {
     return (
       <Card>
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center text-green-600">{t('checkEmailTitle')}</CardTitle>
+          <CardTitle className="text-2xl text-center text-green-600">Check your email</CardTitle>
           <CardDescription className="text-center">
-            {t('checkEmailSubtitle')}
+            We&apos;ve sent you a verification link
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -133,10 +129,10 @@ export function RegisterForm() {
               </svg>
             </div>
             <p className="text-gray-600">
-              {t('verificationInstructions')}
+              Please check your email inbox and click on the verification link to activate your account.
             </p>
             <p className="text-sm text-gray-500">
-              {t('linkExpiry')}
+              The link will expire in 24 hours.
             </p>
           </div>
         </CardContent>
@@ -146,12 +142,12 @@ export function RegisterForm() {
             className="w-full"
             onClick={() => router.push('/login')}
           >
-            {t('goToLogin')}
+            Go to Login
           </Button>
           <p className="text-sm text-center text-gray-500">
-            {t('didntReceive')}{' '}
+            Didn&apos;t receive the email?{' '}
             <Link href="/verify-email" className="text-blue-600 hover:underline">
-              {t('resendVerification')}
+              Resend verification
             </Link>
           </p>
         </CardFooter>
@@ -174,7 +170,7 @@ export function RegisterForm() {
                 : 'top-3 z-10 border-gray-300 bg-gray-100 py-4 text-gray-500 hover:bg-gray-200'
             }`}
           >
-            <p className="text-3xl font-semibold leading-tight tracking-tight">{t('attendeeTab')}</p>
+            <p className="text-3xl font-semibold leading-tight tracking-tight">Attendee</p>
           </div>
         </button>
         <button
@@ -189,15 +185,15 @@ export function RegisterForm() {
                 : 'top-3 z-10 border-gray-300 bg-gray-100 py-4 text-gray-500 hover:bg-gray-200'
             }`}
           >
-            <p className="text-3xl font-semibold leading-tight tracking-tight">{t('organizerTab')}</p>
+            <p className="text-3xl font-semibold leading-tight tracking-tight">Organizer</p>
           </div>
         </button>
       </div>
       <Card className="relative z-20 rounded-t-none rounded-b-[1.75rem] border border-t-0 border-gray-300 shadow-xl">
       <CardHeader className="space-y-2 pt-9">
-        <CardTitle className="text-3xl text-center font-semibold tracking-tight">{t('title')}</CardTitle>
+        <CardTitle className="text-3xl text-center font-semibold tracking-tight">Create your account</CardTitle>
         <CardDescription className="text-center text-base">
-          {role === 'ORGANIZER' ? t('organizerDescription') : t('attendeeDescription')}
+          {role === 'ORGANIZER' ? 'Set up your organizer account to publish events.' : 'Create an attendee account to discover and join events.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -213,10 +209,10 @@ export function RegisterForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName" required>{t('firstNameLabel')}</Label>
+              <Label htmlFor="firstName" required>First Name</Label>
               <Input
                 id="firstName"
-                placeholder={t('firstNamePlaceholder')}
+                placeholder="John"
                 autoComplete="given-name"
                 disabled={isLoading}
                 error={errors.firstName?.message}
@@ -225,10 +221,10 @@ export function RegisterForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="lastName" required>{t('lastNameLabel')}</Label>
+              <Label htmlFor="lastName" required>Last Name</Label>
               <Input
                 id="lastName"
-                placeholder={t('lastNamePlaceholder')}
+                placeholder="Doe"
                 autoComplete="family-name"
                 disabled={isLoading}
                 error={errors.lastName?.message}
@@ -239,11 +235,11 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email" required>{t('emailLabel')}</Label>
+            <Label htmlFor="email" required>Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder={t('emailPlaceholder')}
+              placeholder="name@example.com"
               autoComplete="email"
               disabled={isLoading}
               error={errors.email?.message}
@@ -253,7 +249,7 @@ export function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password" required>{t('passwordLabel')}</Label>
+            <Label htmlFor="password" required>Password</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -269,7 +265,7 @@ export function RegisterForm() {
                 type="button"
                 className="absolute right-3 top-5 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                 onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
                 disabled={isLoading}
               >
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -277,12 +273,12 @@ export function RegisterForm() {
             </div>
             <PasswordStrengthIndicator password={password} />
             <p className="text-xs text-gray-500">
-              {t('passwordHint')}
+              Must be at least 8 characters with uppercase, lowercase, and numbers
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword" required>{t('confirmPasswordLabel')}</Label>
+            <Label htmlFor="confirmPassword" required>Confirm Password</Label>
             <div className="relative">
               <Input
                 id="confirmPassword"
@@ -298,7 +294,7 @@ export function RegisterForm() {
                 type="button"
                 className="absolute right-3 top-5 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                 onClick={() => setShowConfirmPassword((value) => !value)}
-                aria-label={showConfirmPassword ? t('hideConfirmPassword') : t('showConfirmPassword')}
+                aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                 disabled={isLoading}
               >
                 {showConfirmPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -315,27 +311,27 @@ export function RegisterForm() {
               className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <label htmlFor="terms" className="text-sm text-gray-600">
-              {t('termsAgreement')} <span className="text-red-500">*</span>{' '}
+              I agree to the <span className="text-red-500">*</span>{' '}
               <Link href="/terms" className="text-blue-600 hover:underline">
-                {t('termsOfService')}
+                Terms of Service
               </Link>{' '}
-              {t('and')}{' '}
+              and{' '}
               <Link href="/privacy" className="text-blue-600 hover:underline">
-                {t('privacyPolicy')}
+                Privacy Policy
               </Link>
             </label>
           </div>
 
           <Button type="submit" className="w-full" isLoading={isLoading}>
-            {t('submitButton')}
+            Create account
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-4">
         <div className="text-sm text-center text-gray-500">
-          {t('alreadyHaveAccount')}{' '}
+          Already have an account?{' '}
           <Link href="/login" className="text-blue-600 hover:underline">
-            {t('signInLink')}
+            Sign in
           </Link>
         </div>
       </CardFooter>

@@ -1,4 +1,3 @@
-import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,7 +16,7 @@ type AccountSettingsProps = {
   deletionNotice: DeletionNotice
 }
 
-export async function AccountSettings({
+export function AccountSettings({
   userEmail,
   connectedAccounts,
   updateEmailAction,
@@ -28,8 +27,6 @@ export async function AccountSettings({
   deletionScheduledFor,
   deletionNotice,
 }: AccountSettingsProps) {
-  const t = await getTranslations('dashboard.account')
-
   const hasPendingConfirmation = Boolean(deletionRequestedAt) && !deletionScheduledFor
   const hasScheduledDeletion = Boolean(deletionScheduledFor)
   const scheduledForLabel = deletionScheduledFor
@@ -44,15 +41,15 @@ export async function AccountSettings({
 
   const noticeMessage =
     deletionNotice === 'requested'
-      ? t('deleteAccountRequestedNotice')
+      ? 'Deletion confirmation email sent. Please check your inbox.'
       : deletionNotice === 'scheduled'
-        ? t('deleteAccountScheduledNotice')
+        ? 'Account deletion confirmed and scheduled.'
         : deletionNotice === 'cancelled'
-          ? t('deleteAccountCancelledNotice')
+          ? 'Account deletion request canceled.'
           : deletionNotice === 'expired'
-            ? t('deleteAccountExpiredNotice')
+            ? 'Deletion confirmation link expired. Request a new one.'
             : deletionNotice === 'invalid'
-              ? t('deleteAccountInvalidNotice')
+              ? 'Invalid or expired account deletion link.'
               : null
 
   return (
@@ -64,52 +61,52 @@ export async function AccountSettings({
       ) : null}
 
       <form action={updateEmailAction} className="space-y-4 rounded-xl border border-gray-200 bg-white p-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
         <div>
-          <Label htmlFor="email" required>{t('emailLabel')}</Label>
+          <Label htmlFor="email" required>Email</Label>
           <Input id="email" name="email" type="email" defaultValue={userEmail} required />
         </div>
-        <Button type="submit">{t('updateEmailButton')}</Button>
+        <Button type="submit">Update Email</Button>
       </form>
 
       <form action={changePasswordAction} className="space-y-4 rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-gray-900">{t('changePasswordTitle')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <div>
-            <Label htmlFor="currentPassword" required>{t('currentPasswordLabel')}</Label>
+            <Label htmlFor="currentPassword" required>Current Password</Label>
             <Input id="currentPassword" name="currentPassword" type="password" required />
           </div>
           <div>
-            <Label htmlFor="newPassword" required>{t('newPasswordLabel')}</Label>
+            <Label htmlFor="newPassword" required>New Password</Label>
             <Input id="newPassword" name="newPassword" type="password" required />
           </div>
         </div>
-        <Button type="submit">{t('changePasswordButton')}</Button>
+        <Button type="submit">Change Password</Button>
       </form>
 
       <section className="space-y-4 rounded-xl border border-red-200 bg-red-50 p-6">
-        <h2 className="text-lg font-semibold text-red-900">{t('deleteAccountTitle')}</h2>
+        <h2 className="text-lg font-semibold text-red-900">Delete Account</h2>
 
         {hasScheduledDeletion ? (
           <>
             <p className="text-sm text-red-800">
-              {t('deleteAccountScheduledDescription', { date: scheduledForLabel || '' })}
+              {`Your account deletion is scheduled for ${scheduledForLabel || ''}. You can cancel this during the grace period.`}
             </p>
             <form action={cancelDeletionAction}>
-              <Button type="submit" variant="outline">{t('cancelDeletionButton')}</Button>
+              <Button type="submit" variant="outline">Cancel Deletion Request</Button>
             </form>
           </>
         ) : (
           <>
-            <p className="text-sm text-red-800">{t('deleteAccountDescription')}</p>
+            <p className="text-sm text-red-800">Request account deletion by email confirmation. After confirmation, your account enters a grace period before final anonymization.</p>
             {hasPendingConfirmation ? (
-              <p className="text-sm text-red-800">{t('deleteAccountPendingConfirmation')}</p>
+              <p className="text-sm text-red-800">Check your inbox to confirm deletion. You can request another confirmation email if the previous link expired.</p>
             ) : null}
             <form action={deleteAccountAction}>
               <Button type="submit" variant="destructive">
                 {hasPendingConfirmation
-                  ? t('resendDeletionConfirmationButton')
-                  : t('deleteAccountButton')}
+                  ? 'Resend Confirmation Email'
+                  : 'Delete Account'}
               </Button>
             </form>
           </>
@@ -117,9 +114,9 @@ export async function AccountSettings({
       </section>
 
       <section className="space-y-3 rounded-xl border border-gray-200 bg-white p-6">
-        <h2 className="text-lg font-semibold text-gray-900">{t('connectedAccountsTitle')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Connected Accounts</h2>
         {connectedAccounts.length === 0 ? (
-          <p className="text-sm text-gray-600">{t('noConnectedAccounts')}</p>
+          <p className="text-sm text-gray-600">No OAuth accounts connected.</p>
         ) : (
           <ul className="list-disc pl-5 text-sm text-gray-700">
             {connectedAccounts.map((provider) => (

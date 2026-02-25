@@ -5,19 +5,12 @@ import { useSession, signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
-import { useRouter } from 'next/navigation'
-import { setLocale } from '@/lib/actions/locale'
 
 export function Header() {
   const { data: session, status } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement | null>(null)
-  const t = useTranslations('header')
-  const tLang = useTranslations('language')
-  const locale = useLocale()
-  const router = useRouter()
 
   const isOrganizer = session?.user?.roles?.includes('ORGANIZER')
   const isSuperAdmin = session?.user?.roles?.includes('SUPER_ADMIN')
@@ -52,11 +45,6 @@ export function Header() {
     }
   }, [])
 
-  const handleLocaleChange = async (newLocale: string) => {
-    await setLocale(newLocale)
-    router.refresh()
-  }
-
   return (
     <header className="bg-white border-b border-gray-200 print:hidden">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -64,7 +52,7 @@ export function Header() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-blue-600">{t('brandName')}</span>
+              <span className="text-2xl font-bold text-blue-600">OpenEvents</span>
             </Link>
           </div>
 
@@ -75,7 +63,7 @@ export function Header() {
                 href="/create-event"
                 className="inline-flex min-w-[132px] items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
-                {t('createEvent')}
+                Create Event
               </Link>
             )}
             {canAccessMyEvents && (
@@ -83,7 +71,7 @@ export function Header() {
                 href="/dashboard/scan"
                 className="inline-flex min-w-[132px] items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
-                {t('scanTickets')}
+                Scan Tickets
               </Link>
             )}
             {canAccessMyEvents && (
@@ -91,7 +79,7 @@ export function Header() {
                 href="/my-events"
                 className="text-gray-600 hover:text-gray-900 font-medium"
               >
-                {t('myEvents')}
+                My Events
               </Link>
             )}
             {status === 'authenticated' ? (
@@ -101,7 +89,7 @@ export function Header() {
                     href="/dashboard"
                     className="text-gray-600 hover:text-gray-900 font-medium"
                   >
-                    {t('dashboard')}
+                    Dashboard
                   </Link>
                 )}
                 {isSuperAdmin && (
@@ -109,14 +97,14 @@ export function Header() {
                     href="/admin"
                     className="text-gray-600 hover:text-gray-900 font-medium"
                   >
-                    {t('admin')}
+                    Admin
                   </Link>
                 )}
                 <Link
                   href="/my-tickets"
                   className="text-gray-600 hover:text-gray-900 font-medium"
                 >
-                  {t('myTickets')}
+                  My Tickets
                 </Link>
 
                 <div ref={accountMenuRef} className="relative">
@@ -155,7 +143,7 @@ export function Header() {
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         onClick={() => setAccountMenuOpen(false)}
                       >
-                        {t('viewProfile')}
+                        View profile
                       </Link>
                       <button
                         type="button"
@@ -165,7 +153,7 @@ export function Header() {
                           signOut({ callbackUrl: '/' })
                         }}
                       >
-                        {t('signOut')}
+                        Sign out
                       </button>
                     </div>
                   ) : null}
@@ -174,41 +162,13 @@ export function Header() {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link href="/login">
-                  <Button variant="ghost">{t('signIn')}</Button>
+                  <Button variant="ghost">Sign In</Button>
                 </Link>
                 <Link href="/register">
-                  <Button>{t('getStarted')}</Button>
+                  <Button>Get Started</Button>
                 </Link>
               </div>
             )}
-
-            {/* Language switcher */}
-            <div className="flex items-center gap-1 border-l border-gray-200 pl-4 ml-2">
-              <button
-                type="button"
-                onClick={() => handleLocaleChange('en')}
-                className={`px-2 py-1 text-xs rounded font-medium transition ${
-                  locale === 'en'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                aria-label={tLang('en')}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLocaleChange('sv')}
-                className={`px-2 py-1 text-xs rounded font-medium transition ${
-                  locale === 'sv'
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-                aria-label={tLang('sv')}
-              >
-                SV
-              </button>
-            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -218,7 +178,7 @@ export function Header() {
               className="text-gray-500 hover:text-gray-700"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <span className="sr-only">{t('openMenu')}</span>
+              <span className="sr-only">Open menu</span>
               <svg
                 className="h-6 w-6"
                 fill="none"
@@ -253,7 +213,7 @@ export function Header() {
                 className="block rounded-lg bg-blue-600 px-3 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('createEvent')}
+                Create Event
               </Link>
             )}
             {canAccessMyEvents && (
@@ -262,7 +222,7 @@ export function Header() {
                 className="block rounded-lg bg-blue-600 px-3 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('scanTickets')}
+                Scan Tickets
               </Link>
             )}
             {canAccessMyEvents && (
@@ -271,7 +231,7 @@ export function Header() {
                 className="block px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                {t('myEvents')}
+                My Events
               </Link>
             )}
 
@@ -283,7 +243,7 @@ export function Header() {
                     className="block px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    {t('dashboard')}
+                    Dashboard
                   </Link>
                 )}
                 <Link
@@ -291,14 +251,14 @@ export function Header() {
                   className="block px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t('myTickets')}
+                  My Tickets
                 </Link>
                 <Link
                   href={profileHref}
                   className="block px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t('viewProfile')}
+                  View profile
                 </Link>
                 <button
                   className="block w-full text-left px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md"
@@ -307,7 +267,7 @@ export function Header() {
                     signOut({ callbackUrl: '/' })
                   }}
                 >
-                  {t('signOut')}
+                  Sign out
                 </button>
               </>
             ) : (
@@ -317,39 +277,17 @@ export function Header() {
                   className="block px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-md"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t('signIn')}
+                  Sign In
                 </Link>
                 <Link
                   href="/register"
                   className="block px-3 py-2 text-blue-600 font-medium hover:bg-gray-50 rounded-md"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t('getStarted')}
+                  Get Started
                 </Link>
               </>
             )}
-
-            {/* Mobile language switcher */}
-            <div className="flex items-center gap-2 px-3 pt-2 border-t border-gray-100 mt-2">
-              <button
-                type="button"
-                onClick={() => handleLocaleChange('en')}
-                className={`px-3 py-1.5 text-sm rounded font-medium transition ${
-                  locale === 'en' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {tLang('en')}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLocaleChange('sv')}
-                className={`px-3 py-1.5 text-sm rounded font-medium transition ${
-                  locale === 'sv' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {tLang('sv')}
-              </button>
-            </div>
           </div>
         )}
       </nav>

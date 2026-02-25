@@ -1,5 +1,3 @@
-import { getLocale } from 'next-intl/server'
-
 type EventHeroProps = {
   title: string
   description: string | null
@@ -7,9 +5,8 @@ type EventHeroProps = {
   startDate: Date
 }
 
-export async function EventHero({ title, description, coverImage, startDate }: EventHeroProps) {
-  const locale = await getLocale()
-  const formattedDate = new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date(startDate))
+export function EventHero({ title, description, coverImage, startDate }: EventHeroProps) {
+  const formattedDate = new Intl.DateTimeFormat('en', { dateStyle: 'long' }).format(new Date(startDate))
 
   return (
     <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 to-blue-900 p-8 text-white md:p-12">

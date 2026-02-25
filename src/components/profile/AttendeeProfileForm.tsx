@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,7 +18,6 @@ type AttendeeProfileFormProps = {
 }
 
 export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
-  const t = useTranslations('profile')
   const { update } = useSession()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [firstName, setFirstName] = useState(initial.firstName)
@@ -56,7 +54,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
       const presignedPayload = await presignedResponse.json()
       if (!presignedResponse.ok) {
-        setProfilePhotoError(presignedPayload?.error || t('errorUploadImage'))
+        setProfilePhotoError(presignedPayload?.error || 'Could not upload image.')
         return
       }
 
@@ -71,7 +69,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
       })
 
       if (!uploadResponse.ok) {
-        setProfilePhotoError(t('errorUploadImage'))
+        setProfilePhotoError('Could not upload image.')
         return
       }
 
@@ -83,7 +81,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
       const profilePayload = await profileResponse.json()
       if (!profileResponse.ok) {
-        setProfilePhotoError(profilePayload?.message || t('errorSaveImage'))
+        setProfilePhotoError(profilePayload?.message || 'Could not save profile image.')
         return
       }
 
@@ -91,7 +89,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
       setAvatarVersion(Date.now())
       await update()
     } catch {
-      setProfilePhotoError(t('errorUploadImage'))
+      setProfilePhotoError('Could not upload image.')
     } finally {
       setIsUploadingPhoto(false)
     }
@@ -103,7 +101,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
     if (!allowedTypes.includes(file.type)) {
-      setProfilePhotoError(t('errorImageFormat'))
+      setProfilePhotoError('Please select a JPG, PNG, WEBP, or GIF image.')
       return
     }
 
@@ -130,14 +128,14 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
       const result = await response.json()
 
       if (!response.ok) {
-        setError(result?.message || t('errorUpdateProfile'))
+        setError(result?.message || 'Could not update profile.')
         return
       }
 
       await update()
       setAvatarVersion(Date.now())
     } catch {
-      setError(t('errorUpdateProfile'))
+      setError('Could not update profile.')
     } finally {
       setIsSaving(false)
     }
@@ -149,7 +147,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
     setPasswordError(null)
 
     if (newPassword !== confirmPassword) {
-      setPasswordError(t('errorPasswordMatch'))
+      setPasswordError('Passwords do not match.')
       setIsChangingPassword(false)
       return
     }
@@ -167,7 +165,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
       const result = await response.json()
       if (!response.ok) {
-        setPasswordError(result?.message || t('errorUpdatePassword'))
+        setPasswordError(result?.message || 'Could not update password.')
         return
       }
 
@@ -175,7 +173,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
       setNewPassword('')
       setConfirmPassword('')
     } catch {
-      setPasswordError(t('errorUpdatePassword'))
+      setPasswordError('Could not update password.')
     } finally {
       setIsChangingPassword(false)
     }
@@ -185,7 +183,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>{t('title')}</CardTitle>
+          <CardTitle>Profile</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -201,18 +199,18 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
             )}
 
             <div className="space-y-3">
-              <Label htmlFor="photoUpload">{t('photoLabel')}</Label>
+              <Label htmlFor="photoUpload">Profile Photo</Label>
               <div className="flex items-center gap-4">
                 <div className="h-16 w-16 overflow-hidden rounded-full border border-gray-200 bg-gray-50">
                   {image ? (
                     <img
                       src={`/api/users/me/avatar?v=${avatarVersion}`}
-                      alt={t('avatarAlt')}
+                      alt="Profile"
                       className="h-full w-full object-cover"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                      {t('noPhoto')}
+                      No photo
                     </div>
                   )}
                 </div>
@@ -232,7 +230,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
                     onClick={() => fileInputRef.current?.click()}
                     isLoading={isUploadingPhoto}
                   >
-                    {t('addFileButton')}
+                    Add file
                   </Button>
                 </div>
               </div>
@@ -240,7 +238,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="firstName" required>{t('firstNameLabel')}</Label>
+                <Label htmlFor="firstName" required>First Name</Label>
                 <Input
                   id="firstName"
                   value={firstName}
@@ -249,7 +247,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName" required>{t('lastNameLabel')}</Label>
+                <Label htmlFor="lastName" required>Last Name</Label>
                 <Input
                   id="lastName"
                   value={lastName}
@@ -260,7 +258,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">{t('emailLabel')}</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 value={initial.email}
@@ -269,7 +267,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
             </div>
 
             <Button type="submit" isLoading={isSaving || isUploadingPhoto}>
-              {t('saveButton')}
+              Save Changes
             </Button>
           </form>
         </CardContent>
@@ -277,7 +275,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>{t('changePasswordTitle')}</CardTitle>
+          <CardTitle>Change Password</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={onChangePassword} className="space-y-4">
@@ -288,7 +286,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="currentPassword" required>{t('currentPasswordLabel')}</Label>
+              <Label htmlFor="currentPassword" required>Current Password</Label>
               <Input
                 id="currentPassword"
                 type="password"
@@ -300,7 +298,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="newPassword" required>{t('newPasswordLabel')}</Label>
+                <Label htmlFor="newPassword" required>New Password</Label>
                 <Input
                   id="newPassword"
                   type="password"
@@ -310,7 +308,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" required>{t('confirmPasswordLabel')}</Label>
+                <Label htmlFor="confirmPassword" required>Confirm New Password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -322,7 +320,7 @@ export function AttendeeProfileForm({ initial }: AttendeeProfileFormProps) {
             </div>
 
             <Button type="submit" isLoading={isChangingPassword}>
-              {t('updatePasswordButton')}
+              Update Password
             </Button>
           </form>
         </CardContent>

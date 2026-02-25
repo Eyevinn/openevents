@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { EventStatus, EventVisibility, LocationType } from '@prisma/client'
 import { Calendar, MapPin, Heart } from 'lucide-react'
-import { useTranslations, useLocale } from 'next-intl'
 
 type EventCardProps = {
   event: {
@@ -27,38 +26,35 @@ type EventCardProps = {
 }
 
 export function EventCard({ event }: EventCardProps) {
-  const t = useTranslations('events.card')
-  const locale = useLocale()
-
   // Price display
   let priceDisplay: string | null = null
   if (event.ticketTypes.length > 0) {
     const min = Math.min(...event.ticketTypes.map((t) => t.price))
     if (min === 0) {
-      priceDisplay = t('free')
+      priceDisplay = 'Free'
     } else {
       const currency = event.ticketTypes[0]?.currency || 'SEK'
-      const formatted = new Intl.NumberFormat(locale, {
+      const formatted = new Intl.NumberFormat('en', {
         style: 'currency',
         currency,
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(min)
-      priceDisplay = t('fromPrice', { price: formatted })
+      priceDisplay = `From ${formatted}`
     }
   }
 
   // Location display
   let locationDisplay: string
   if (event.locationType === 'ONLINE') {
-    locationDisplay = t('onlineEvent')
+    locationDisplay = 'Online event'
   } else {
     const parts = [event.venue, event.city].filter(Boolean)
-    locationDisplay = parts.join(', ') || t('locationTBD')
+    locationDisplay = parts.join(', ') || 'Location TBD'
   }
 
   // Locale-aware date formatting
-  const formattedDate = new Intl.DateTimeFormat(locale, {
+  const formattedDate = new Intl.DateTimeFormat('en', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -70,7 +66,7 @@ export function EventCard({ event }: EventCardProps) {
     <Link
       href={`/events/${event.slug}`}
       className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      aria-label={t('viewEventAriaLabel', { title: event.title })}
+      aria-label={`View event: ${event.title}`}
     >
       <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-[#f2f2f4] shadow-[0px_4px_6px_-1px_rgba(0,0,0,0.1),0px_2px_4px_-2px_rgba(0,0,0,0.1)] transition-shadow hover:shadow-lg">
         {/* Image section */}
@@ -87,7 +83,7 @@ export function EventCard({ event }: EventCardProps) {
             type="button"
             onClick={(e) => e.preventDefault()}
             className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)]"
-            aria-label={t('addToFavourites')}
+            aria-label="Add to favourites"
           >
             <Heart className="h-5 w-5 text-gray-400" />
           </button>

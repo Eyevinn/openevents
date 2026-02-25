@@ -1,5 +1,3 @@
-import { getTranslations } from 'next-intl/server'
-
 type EventFiltersProps = {
   initial: {
     search?: string
@@ -10,27 +8,25 @@ type EventFiltersProps = {
   }
 }
 
-export async function EventFilters({ initial }: EventFiltersProps) {
-  const t = await getTranslations('events.filters')
-
+export function EventFilters({ initial }: EventFiltersProps) {
   return (
     <form className="grid grid-cols-1 gap-3 rounded-xl border border-gray-200 bg-white p-4 md:grid-cols-5" method="GET">
       <input
         name="search"
         defaultValue={initial.search}
-        placeholder={t('searchPlaceholder')}
+        placeholder="Search events"
         className="h-10 rounded-md border border-gray-300 px-3 text-sm"
       />
       <input
         name="category"
         defaultValue={initial.category}
-        placeholder={t('categoryPlaceholder')}
+        placeholder="Category"
         className="h-10 rounded-md border border-gray-300 px-3 text-sm"
       />
       <input
         name="location"
         defaultValue={initial.location}
-        placeholder={t('locationPlaceholder')}
+        placeholder="Location"
         className="h-10 rounded-md border border-gray-300 px-3 text-sm"
       />
       <input
@@ -47,7 +43,7 @@ export async function EventFilters({ initial }: EventFiltersProps) {
       />
       <div className="md:col-span-5 flex justify-end">
         <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
-          {t('applyFilters')}
+          Apply Filters
         </button>
       </div>
     </form>

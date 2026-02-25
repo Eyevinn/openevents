@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { EventStatus } from '@prisma/client'
-import { getTranslations } from 'next-intl/server'
 import { EventStatusBadge } from '@/components/dashboard/EventStatusBadge'
 import { formatDateTime } from '@/lib/utils'
 
@@ -14,20 +13,18 @@ type UpcomingEventsProps = {
   }>
 }
 
-export async function UpcomingEvents({ events }: UpcomingEventsProps) {
-  const t = await getTranslations('dashboard.upcomingEvents')
-
+export function UpcomingEvents({ events }: UpcomingEventsProps) {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">{t('title')}</h2>
+        <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
         <Link href="/dashboard/events" className="text-sm text-blue-600 hover:text-blue-700">
-          {t('viewAll')}
+          View all
         </Link>
       </div>
 
       {events.length === 0 ? (
-        <p className="text-sm text-gray-600">{t('noEvents')}</p>
+        <p className="text-sm text-gray-600">No upcoming events.</p>
       ) : (
         <div className="space-y-3">
           {events.map((event) => (
@@ -40,7 +37,7 @@ export async function UpcomingEvents({ events }: UpcomingEventsProps) {
               </div>
               <p className="mt-1 text-sm text-gray-600">{formatDateTime(event.startDate)}</p>
               <Link href={`/events/${event.slug}`} className="mt-1 inline-block text-xs text-gray-500 hover:text-gray-700">
-                {t('openPublicPage')}
+                Open public page
               </Link>
             </div>
           ))}

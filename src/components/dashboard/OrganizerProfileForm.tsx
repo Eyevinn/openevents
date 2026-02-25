@@ -1,4 +1,3 @@
-import { getTranslations } from 'next-intl/server'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,20 +13,18 @@ type OrganizerProfileFormProps = {
   action: (formData: FormData) => Promise<void>
 }
 
-export async function OrganizerProfileForm({ initial, action }: OrganizerProfileFormProps) {
-  const t = await getTranslations('dashboard.settings')
-
+export function OrganizerProfileForm({ initial, action }: OrganizerProfileFormProps) {
   return (
     <form action={action} className="space-y-4 rounded-xl border border-gray-200 bg-white p-6">
-      <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Organizer Profile</h1>
 
       <div>
-        <Label htmlFor="orgName" required>{t('orgNameLabel')}</Label>
+        <Label htmlFor="orgName" required>Organization Name</Label>
         <Input id="orgName" name="orgName" defaultValue={initial.orgName} required />
       </div>
 
       <div>
-        <Label htmlFor="description">{t('descriptionLabel')}</Label>
+        <Label htmlFor="description">Description</Label>
         <textarea
           id="description"
           name="description"
@@ -38,24 +35,24 @@ export async function OrganizerProfileForm({ initial, action }: OrganizerProfile
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <Label htmlFor="website">{t('websiteLabel')}</Label>
+          <Label htmlFor="website">Website</Label>
           <Input id="website" name="website" defaultValue={initial.website || ''} />
         </div>
         <div>
-          <Label htmlFor="logo">{t('logoLabel')}</Label>
+          <Label htmlFor="logo">Logo URL</Label>
           <Input id="logo" name="logo" defaultValue={initial.logo || ''} />
         </div>
         <div>
-          <Label htmlFor="twitter">{t('twitterLabel')}</Label>
+          <Label htmlFor="twitter">Twitter</Label>
           <Input id="twitter" name="twitter" defaultValue={initial.socialLinks.twitter || ''} />
         </div>
         <div>
-          <Label htmlFor="linkedin">{t('linkedinLabel')}</Label>
+          <Label htmlFor="linkedin">LinkedIn</Label>
           <Input id="linkedin" name="linkedin" defaultValue={initial.socialLinks.linkedin || ''} />
         </div>
       </div>
 
-      <Button type="submit">{t('saveButton')}</Button>
+      <Button type="submit">Save Profile</Button>
     </form>
   )
 }

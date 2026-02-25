@@ -1,12 +1,10 @@
 import { redirect } from 'next/navigation'
-import { getTranslations } from 'next-intl/server'
 import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { OrderList, type DashboardOrderListItem } from '@/components/dashboard/OrderList'
 import { isCancellationDeadlinePassed } from '@/lib/utils'
 
 export default async function MyTicketsPage() {
-  const t = await getTranslations('myTickets')
   const user = await getCurrentUser()
 
   if (!user) {
@@ -81,8 +79,8 @@ export default async function MyTicketsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-        <p className="text-sm text-gray-600">{t('subtitle')}</p>
+        <h1 className="text-2xl font-bold text-gray-900">My Tickets</h1>
+        <p className="text-sm text-gray-600">View your ticket orders and event confirmations.</p>
       </div>
 
       <OrderList orders={mappedOrders} />

@@ -1,11 +1,9 @@
 import { notFound } from 'next/navigation'
-import { OrderStatus } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { requireOrganizerProfile } from '@/lib/dashboard/organizer'
 import { EventDashboard } from '@/components/dashboard/EventDashboard'
 import { RecentOrders } from '@/components/dashboard/RecentOrders'
-
-const revenueStatuses: OrderStatus[] = ['PAID', 'PENDING_INVOICE']
+import { getEventAnalytics } from '@/lib/analytics/event-analytics'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -16,10 +14,7 @@ export default async function EventDetailDashboardPage({ params }: PageProps) {
   const { id } = await params
 
   const event = await prisma.event.findFirst({
-    where: {
-      id,
-      organizerId: organizerProfile.id,
-    },
+    where: { id, organizerId: organizerProfile.id },
     select: {
       id: true,
       slug: true,
@@ -28,61 +23,16 @@ export default async function EventDetailDashboardPage({ params }: PageProps) {
       startDate: true,
       endDate: true,
       createdAt: true,
-      _count: {
-        select: {
-          orders: true,
-          ticketTypes: true,
-        },
-      },
-      ticketTypes: {
-        select: {
-          id: true,
-          name: true,
-          soldCount: true,
-          maxCapacity: true,
-        },
-      },
     },
   })
 
-  if (!event) {
-    notFound()
-  }
+  if (!event) notFound()
 
-  const [orderStats, revenueAgg, ticketItemAgg, recentOrders] = await prisma.$transaction([
+  // Run analytics (cached 5 min) and recent orders (always fresh) in parallel
+  const [analytics, recentOrders] = await Promise.all([
+    getEventAnalytics(event.id),
     prisma.order.findMany({
       where: { eventId: event.id },
-      select: { status: true },
-    }),
-    prisma.order.aggregate({
-      where: {
-        eventId: event.id,
-        status: { in: revenueStatuses },
-      },
-      _sum: {
-        totalAmount: true,
-      },
-    }),
-    prisma.orderItem.groupBy({
-      by: ['ticketTypeId'],
-      orderBy: {
-        ticketTypeId: 'asc',
-      },
-      where: {
-        order: {
-          eventId: event.id,
-          status: { in: revenueStatuses },
-        },
-      },
-      _sum: {
-        quantity: true,
-        totalPrice: true,
-      },
-    }),
-    prisma.order.findMany({
-      where: {
-        eventId: event.id,
-      },
       select: {
         id: true,
         orderNumber: true,
@@ -91,47 +41,29 @@ export default async function EventDetailDashboardPage({ params }: PageProps) {
         currency: true,
         buyerEmail: true,
         createdAt: true,
-        event: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
+        event: { select: { id: true, title: true } },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
       take: 8,
     }),
   ])
-
-  const countsByStatus = orderStats.reduce<Record<string, number>>((acc, row) => {
-    acc[row.status] = (acc[row.status] ?? 0) + 1
-    return acc
-  }, {})
-
-  const ticketsByType = event.ticketTypes.map((ticketType) => {
-    const sales = ticketItemAgg.find((item) => item.ticketTypeId === ticketType.id)
-    return {
-      name: ticketType.name,
-      sold: sales?._sum?.quantity ?? 0,
-      revenue: Number(sales?._sum?.totalPrice?.toString() ?? '0'),
-      remaining: ticketType.maxCapacity === null ? null : Math.max(ticketType.maxCapacity - ticketType.soldCount, 0),
-    }
-  })
 
   return (
     <div className="space-y-6">
       <EventDashboard
         event={event}
         stats={{
-          totalRevenue: Number(revenueAgg._sum.totalAmount?.toString() ?? '0'),
-          totalOrders: Object.values(countsByStatus).reduce((sum, count) => sum + count, 0),
-          paidOrders: countsByStatus.PAID ?? 0,
-          pendingInvoiceOrders: countsByStatus.PENDING_INVOICE ?? 0,
-          cancelledOrders: countsByStatus.CANCELLED ?? 0,
-          refundedOrders: (countsByStatus.REFUNDED ?? 0) + (countsByStatus.PARTIALLY_REFUNDED ?? 0),
-          ticketsByType,
+          totalRevenue: analytics.totalRevenue,
+          totalTicketsSold: analytics.totalTicketsSold,
+          totalOrders: analytics.orderCounts.total,
+          paidOrders: analytics.orderCounts.paid,
+          pendingInvoiceOrders: analytics.orderCounts.pendingInvoice,
+          cancelledOrders: analytics.orderCounts.cancelled,
+          refundedOrders: analytics.orderCounts.refunded,
+          refundedAmount: analytics.refundedAmount,
+          refundRate: analytics.refundRate,
+          ticketsByType: analytics.ticketsByType,
+          dailySales: analytics.dailySales,
         }}
       />
 

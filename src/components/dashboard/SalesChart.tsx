@@ -7,23 +7,25 @@ type SalesChartProps = {
     value: number
   }>
   currency?: string
+  formatter?: (value: number) => string
 }
 
-export function SalesChart({ title = 'Sales Breakdown', data, currency = 'SEK' }: SalesChartProps) {
+export function SalesChart({ title = 'Sales Breakdown', data, formatter, currency = 'SEK' }: SalesChartProps) {
   const maxValue = Math.max(...data.map((item) => item.value), 0)
+  const formatValue = formatter ?? ((v: number) => formatCurrency(v, currency))
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-6">
       <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
       {data.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">No sales data yet.</p>
+        <p className="mt-3 text-sm text-gray-500">No sales data yet.</p>
       ) : (
         <div className="mt-4 space-y-3">
           {data.map((item) => (
             <div key={item.label}>
               <div className="mb-1 flex items-center justify-between text-sm">
                 <span className="text-gray-700">{item.label}</span>
-                <span className="font-medium text-gray-900">{formatCurrency(item.value, currency)}</span>
+                <span className="font-medium text-gray-900">{formatValue(item.value)}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-gray-100">
                 <div

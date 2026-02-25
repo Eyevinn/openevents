@@ -1,6 +1,5 @@
 'use client'
 
-import { useTranslations } from 'next-intl'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/utils'
 
@@ -30,16 +29,14 @@ export function OrderSummary({
   currency,
   discountCode,
 }: OrderSummaryProps) {
-  const t = useTranslations('orderSummary')
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{t('title')}</CardTitle>
+        <CardTitle className="text-lg">Order Summary</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {items.length === 0 ? (
-          <p className="text-sm text-gray-500">{t('empty')}</p>
+          <p className="text-sm text-gray-500">Select tickets to see your summary.</p>
         ) : (
           <div className="space-y-2">
             {items.map((item) => (
@@ -60,19 +57,19 @@ export function OrderSummary({
 
         <div className="space-y-2 border-t border-gray-200 pt-3 text-sm">
           <div className="flex items-center justify-between text-gray-600">
-            <span>{t('subtotal')}</span>
+            <span>Subtotal</span>
             <span>{formatCurrency(subtotal, currency)}</span>
           </div>
 
           {discountAmount > 0 && (
             <div className="flex items-center justify-between text-green-700">
-              <span>{discountCode ? t('discountWithCode', { code: discountCode }) : t('discount')}</span>
+              <span>{discountCode ? `Discount (${discountCode})` : 'Discount'}</span>
               <span>-{formatCurrency(discountAmount, currency)}</span>
             </div>
           )}
 
           <div className="flex items-center justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900">
-            <span>{t('total')}</span>
+            <span>Total</span>
             <span>{formatCurrency(totalAmount, currency)}</span>
           </div>
         </div>

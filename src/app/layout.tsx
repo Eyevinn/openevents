@@ -4,8 +4,6 @@ import "./globals.css"
 import { Providers } from "@/components/Providers"
 import { Header } from "@/components/layout/Header"
 import { Footer } from "@/components/layout/Footer"
-import { NextIntlClientProvider } from 'next-intl'
-import { getLocale, getMessages } from 'next-intl/server'
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -23,26 +21,21 @@ export const metadata: Metadata = {
   keywords: ["events", "ticketing", "event management", "conferences", "meetups"],
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const locale = await getLocale()
-  const messages = await getMessages()
-
   return (
-    <html lang={locale}>
+    <html lang="en">
       <body className={`${outfit.variable} font-sans antialiased`} suppressHydrationWarning>
-        <NextIntlClientProvider messages={messages}>
-          <Providers>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-          </Providers>
-        </NextIntlClientProvider>
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+        </Providers>
       </body>
     </html>
   )

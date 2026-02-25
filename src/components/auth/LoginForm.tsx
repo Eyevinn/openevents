@@ -12,12 +12,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { useTranslations } from 'next-intl'
-
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const t = useTranslations('auth.login')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
@@ -29,16 +26,16 @@ export function LoginForm() {
 
   const getInitialMessage = () => {
     if (verified === 'true') {
-      return { type: 'success', text: t('verifiedSuccess') }
+      return { type: 'success', text: 'Email verified successfully! You can now log in.' }
     }
     if (message === 'already_verified') {
-      return { type: 'info', text: t('alreadyVerified') }
+      return { type: 'info', text: 'Your email is already verified. Please log in.' }
     }
     if (urlError === 'token_expired') {
-      return { type: 'error', text: t('tokenExpired') }
+      return { type: 'error', text: 'Verification link has expired. Please request a new one.' }
     }
     if (urlError === 'invalid_token') {
-      return { type: 'error', text: t('invalidToken') }
+      return { type: 'error', text: 'Invalid verification link.' }
     }
     return null
   }
@@ -81,7 +78,7 @@ export function LoginForm() {
         router.refresh()
       }
     } catch {
-      setError(t('unexpectedError'))
+      setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -90,9 +87,9 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl text-center">{t('title')}</CardTitle>
+        <CardTitle className="text-2xl text-center">Sign in</CardTitle>
         <CardDescription className="text-center">
-          {t('description')}
+          Enter your email and password to sign in
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -121,11 +118,11 @@ export function LoginForm() {
         {/* Login Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">{t('emailLabel')}</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder={t('emailPlaceholder')}
+              placeholder="name@example.com"
               autoComplete="email"
               disabled={isLoading}
               error={errors.email?.message}
@@ -134,12 +131,12 @@ export function LoginForm() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">{t('passwordLabel')}</Label>
+              <Label htmlFor="password">Password</Label>
               <Link
                 href="/forgot-password"
                 className="text-sm text-blue-600 hover:underline"
               >
-                {t('forgotPassword')}
+                Forgot password?
               </Link>
             </div>
             <div className="relative">
@@ -156,7 +153,7 @@ export function LoginForm() {
                 type="button"
                 className="absolute right-3 top-5 -translate-y-1/2 text-gray-500 hover:text-gray-700 disabled:opacity-50"
                 onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
                 disabled={isLoading}
               >
                 {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -164,15 +161,15 @@ export function LoginForm() {
             </div>
           </div>
           <Button type="submit" className="w-full" isLoading={isLoading}>
-            {t('submitButton')}
+            Sign in
           </Button>
         </form>
       </CardContent>
       <CardFooter className="flex flex-col space-y-4">
         <div className="text-sm text-center text-gray-500">
-          {t('noAccount')}{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/register" className="text-blue-600 hover:underline">
-            {t('signUpLink')}
+            Sign up
           </Link>
         </div>
       </CardFooter>

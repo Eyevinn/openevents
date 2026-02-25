@@ -1,5 +1,3 @@
-import { getLocale, getTranslations } from 'next-intl/server'
-
 type AgendaItem = {
   id: string
   title: string
@@ -13,16 +11,14 @@ type EventAgendaProps = {
   items: AgendaItem[]
 }
 
-export async function EventAgenda({ items }: EventAgendaProps) {
-  const locale = await getLocale()
-  const t = await getTranslations('eventDetails')
-  const timeFmt = new Intl.DateTimeFormat(locale, { timeStyle: 'short' })
+export function EventAgenda({ items }: EventAgendaProps) {
+  const timeFmt = new Intl.DateTimeFormat('en', { timeStyle: 'short' })
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-6">
-      <h2 className="text-xl font-semibold text-gray-900">{t('agendaTitle')}</h2>
+      <h2 className="text-xl font-semibold text-gray-900">Agenda</h2>
       {items.length === 0 ? (
-        <p className="mt-3 text-sm text-gray-600">{t('agendaEmpty')}</p>
+        <p className="mt-3 text-sm text-gray-600">Agenda will be published soon.</p>
       ) : (
         <ul className="mt-4 space-y-4">
           {items.map((item) => (
