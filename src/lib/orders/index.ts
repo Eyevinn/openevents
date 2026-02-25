@@ -48,7 +48,7 @@ export function prepareOrderItems(
     price: Prisma.Decimal
     currency: string
     minPerOrder: number
-    maxPerOrder: number
+    maxPerOrder: number | null
   }>,
   requestedItems: RequestedOrderItem[]
 ): { items: PreparedOrderItem[]; subtotal: number } {
@@ -69,7 +69,7 @@ export function prepareOrderItems(
       )
     }
 
-    if (requestedItem.quantity > ticketType.maxPerOrder) {
+    if (ticketType.maxPerOrder !== null && requestedItem.quantity > ticketType.maxPerOrder) {
       throw new Error(
         `Maximum quantity for ${ticketType.name} is ${ticketType.maxPerOrder}`
       )

@@ -79,7 +79,8 @@ export default async function TicketTypesPage({ params, searchParams }: PageProp
     const maxCapacityRaw = String(formData.get('maxCapacity') || '').trim()
     const maxCapacity = maxCapacityRaw ? Number(maxCapacityRaw) : null
     const minPerOrder = Number(String(formData.get('minPerOrder') || '1'))
-    const maxPerOrder = Number(String(formData.get('maxPerOrder') || '10'))
+    const maxPerOrderRaw = String(formData.get('maxPerOrder') || '').trim()
+    const maxPerOrder = maxPerOrderRaw ? Number(maxPerOrderRaw) : null
     const isVisible = String(formData.get('isVisible') || 'true') === 'true'
 
     await prisma.ticketType.create({
@@ -133,7 +134,8 @@ export default async function TicketTypesPage({ params, searchParams }: PageProp
     const maxCapacityRaw = String(formData.get('maxCapacity') || '').trim()
     const maxCapacity = maxCapacityRaw ? Number(maxCapacityRaw) : null
     const minPerOrder = Number(String(formData.get('minPerOrder') || '1'))
-    const maxPerOrder = Number(String(formData.get('maxPerOrder') || '10'))
+    const maxPerOrderRaw = String(formData.get('maxPerOrder') || '').trim()
+    const maxPerOrder = maxPerOrderRaw ? Number(maxPerOrderRaw) : null
     const isVisible = String(formData.get('isVisible') || 'true') === 'true'
 
     await prisma.ticketType.update({

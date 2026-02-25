@@ -734,7 +734,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         maxCapacity,
         isVisible: true,
         minPerOrder: 1,
-        maxPerOrder: 10,
+        maxPerOrder: null,
         sortOrder: index,
       }
 

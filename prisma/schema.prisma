@@ -360,7 +360,7 @@ model TicketType {
   isVisible       Boolean  @default(true) // Hidden types only via discount code
 
   // Settings
-  maxPerOrder     Int      @default(10)
+  maxPerOrder     Int?
   minPerOrder     Int      @default(1)
 
   sortOrder       Int      @default(0)

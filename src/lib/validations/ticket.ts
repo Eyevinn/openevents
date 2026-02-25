@@ -11,7 +11,7 @@ const ticketTypeBaseSchema = z.object({
   salesStartDate: z.string().datetime().optional().nullable(),
   salesEndDate: z.string().datetime().optional().nullable(),
   isVisible: z.boolean().default(true),
-  maxPerOrder: z.number().int().min(1).default(10),
+  maxPerOrder: z.number().int().min(1).optional().nullable(),
   minPerOrder: z.number().int().min(1).default(1),
   sortOrder: z.number().default(0),
 })
@@ -68,7 +68,7 @@ export const updateDiscountCodeSchema = discountCodeBaseSchema.partial().omit({ 
 export const validateDiscountCodeSchema = z.object({
   eventId: z.string().cuid(),
   code: z.string().min(1),
-  ticketTypeIds: z.array(z.string().cuid()).optional(),
+  ticketTypeIds: z.array(z.string().min(1)).optional(),
 })
 
 export type CreateTicketTypeInput = z.infer<typeof createTicketTypeSchema>

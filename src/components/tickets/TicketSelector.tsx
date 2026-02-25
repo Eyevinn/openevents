@@ -11,7 +11,7 @@ export interface SelectableTicketType {
   price: number
   currency: string
   minPerOrder: number
-  maxPerOrder: number
+  maxPerOrder: number | null
   remaining: number | null
   sold: number
   isAvailable: boolean
@@ -32,8 +32,9 @@ export function TicketSelector({
     <div className="space-y-4">
       {ticketTypes.map((ticketType) => {
         const currentQuantity = quantities[ticketType.id] ?? 0
-        const maxByCapacity = ticketType.remaining ?? ticketType.maxPerOrder
-        const maxSelectable = Math.min(ticketType.maxPerOrder, maxByCapacity)
+        const maxByCapacity = ticketType.remaining ?? Infinity
+        const maxByOrder = ticketType.maxPerOrder ?? Infinity
+        const maxSelectable = Math.min(maxByOrder, maxByCapacity)
         const canDecrease = currentQuantity > 0
         const canIncrease = ticketType.isAvailable && currentQuantity < maxSelectable
 
