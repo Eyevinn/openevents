@@ -8,10 +8,11 @@ export function normalizeNameList(names?: string[]): string[] {
 /**
  * Builds the data structure for creating event people (speakers, etc.).
  */
-export function buildPeopleCreateData(speakerNames: string[], jobTitles: string[], organizations: string[]) {
+export function buildPeopleCreateData(speakerNames: string[], jobTitles: string[], organizations: string[], photos?: string[]) {
   return speakerNames.map((name, index) => ({
     name,
     title: jobTitles[index] || null,
+    photo: photos?.[index] || null,
     sortOrder: index,
     socialLinks: {
       __kind: 'EVENT_PEOPLE',

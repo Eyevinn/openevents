@@ -1,9 +1,9 @@
 'use client'
 
 import Cropper, { Area } from 'react-easy-crop'
-import { ChangeEvent, DragEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Upload } from 'lucide-react'
+import { ChevronDown, Trash2, Upload, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { FloatingToast } from '@/components/ui/floating-toast'
 import { Input } from '@/components/ui/input'
@@ -63,10 +63,12 @@ type EventFormData = {
   categoryIds?: string[]
 }
 
+type Category = { id: string; name: string }
+
 type EventFormProps = {
   mode: EventFormMode
   initialData?: EventFormData
-  children?: ReactNode
+  categories?: Category[]
 }
 
 type FieldKey =
@@ -87,6 +89,25 @@ type FieldErrors = Partial<Record<FieldKey, string>>
 
 type CropSession = {
   targetField: ImageTargetField
+  sourceUrl: string
+  fileName: string
+  mimeType: string
+}
+
+type SpeakerDraft = {
+  key: string
+  name: string
+  title: string
+  organization: string
+  originalFile: File | null
+  croppedFile: File | null
+  previewUrl: string | null
+  publicUrl: string
+  isUploading: boolean
+}
+
+type SpeakerCropSession = {
+  speakerKey: string
   sourceUrl: string
   fileName: string
   mimeType: string
@@ -399,13 +420,17 @@ function buildSnapshot(form: EventFormData) {
   })
 }
 
-export function EventForm({ mode, initialData, children }: EventFormProps) {
+export function EventForm({ mode, initialData, categories = [] }: EventFormProps) {
   const router = useRouter()
   const bannerInputRef = useRef<HTMLInputElement | null>(null)
   const bottomInputRef = useRef<HTMLInputElement | null>(null)
   const bannerObjectUrlRef = useRef<string | null>(null)
   const bottomObjectUrlRef = useRef<string | null>(null)
   const cropObjectUrlRef = useRef<string | null>(null)
+  const speakerImageInputRef = useRef<HTMLInputElement | null>(null)
+  const speakerImageTargetKeyRef = useRef<string>('')
+  const speakerCropObjectUrlRef = useRef<string | null>(null)
+  const speakerPreviewUrlsRef = useRef<Map<string, string>>(new Map())
 
   const mergedInitialData = useMemo(() => ({ ...fallbackInitialData, ...initialData }), [initialData])
 
@@ -452,6 +477,8 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
   const [generalErrors, setGeneralErrors] = useState<string[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; tone: 'success' | 'error' } | null>(null)
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const categoryDropdownRef = useRef<HTMLDivElement | null>(null)
   const [bannerPreviewSrc, setBannerPreviewSrc] = useState<string | null>(null)
   const [bottomPreviewSrc, setBottomPreviewSrc] = useState<string | null>(null)
   const [imageVersion, setImageVersion] = useState(0)
@@ -460,6 +487,12 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
   const [cropZoom, setCropZoom] = useState(1)
   const [cropPixels, setCropPixels] = useState<Area | null>(null)
   const [activeDropTarget, setActiveDropTarget] = useState<ImageTargetField | null>(null)
+  const [speakerDrafts, setSpeakerDrafts] = useState<SpeakerDraft[]>([])
+  const [speakerCropSession, setSpeakerCropSession] = useState<SpeakerCropSession | null>(null)
+  const [speakerCropPosition, setSpeakerCropPosition] = useState({ x: 0, y: 0 })
+  const [speakerCropZoom, setSpeakerCropZoom] = useState(1)
+  const [speakerCropPixels, setSpeakerCropPixels] = useState<Area | null>(null)
+  const [isApplyingSpeakerCrop, setIsApplyingSpeakerCrop] = useState(false)
   const [originalImageFiles, setOriginalImageFiles] = useState<Record<ImageTargetField, File | null>>({
     coverImage: null,
     bottomImage: null,
@@ -582,6 +615,26 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
   }
 
   useEffect(() => {
+    if (mode !== 'create' || initialData?.timezone) return
+    const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (isValidTimeZone(browserTimezone)) {
+      setForm((current) => ({ ...current, timezone: browserTimezone }))
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (!isCategoryOpen) return
+    function handleClickOutside(event: MouseEvent) {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isCategoryOpen])
+
+  useEffect(() => {
     return () => {
       if (bannerObjectUrlRef.current) {
         URL.revokeObjectURL(bannerObjectUrlRef.current)
@@ -591,6 +644,12 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       }
       if (cropObjectUrlRef.current) {
         URL.revokeObjectURL(cropObjectUrlRef.current)
+      }
+      if (speakerCropObjectUrlRef.current) {
+        URL.revokeObjectURL(speakerCropObjectUrlRef.current)
+      }
+      for (const url of speakerPreviewUrlsRef.current.values()) {
+        URL.revokeObjectURL(url)
       }
     }
   }, [])
@@ -1046,6 +1105,22 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     }
   }
 
+  function deleteUploadedImage(targetField: ImageTargetField) {
+    cleanupObjectUrl(targetField)
+    if (targetField === 'coverImage') {
+      setBannerPreviewSrc(null)
+    } else {
+      setBottomPreviewSrc(null)
+    }
+    setOriginalImageFiles((current) => ({ ...current, [targetField]: null }))
+    setCroppedImageFiles((current) => ({ ...current, [targetField]: null }))
+    setEditableImageFiles((current) => ({ ...current, [targetField]: null }))
+    updateField(targetField, '')
+    if (cropSession?.targetField === targetField) {
+      closeCropper()
+    }
+  }
+
   async function resetImageToOriginal(targetField: ImageTargetField) {
     const originalFile = originalImageFiles[targetField]
     if (!originalFile) return
@@ -1057,10 +1132,10 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
     }
 
     try {
-      setCroppedImageFiles((current) => ({ ...current, [targetField]: null }))
       setEditableImageFiles((current) => ({ ...current, [targetField]: originalFile }))
       setLocalPreview(originalFile, targetField)
       await uploadEventImage(originalFile, targetField)
+      setCroppedImageFiles((current) => ({ ...current, [targetField]: null }))
       setImageVersion((version) => version + 1)
       closeCropper()
     } catch (resetError) {
@@ -1073,6 +1148,163 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       } else {
         setIsUploadingBottom(false)
       }
+    }
+  }
+
+  function addSpeakerDraft() {
+    setSpeakerDrafts((current) => [
+      ...current,
+      {
+        key: `speaker-${Date.now()}-${Math.random()}`,
+        name: '',
+        title: '',
+        organization: '',
+        originalFile: null,
+        croppedFile: null,
+        previewUrl: null,
+        publicUrl: '',
+        isUploading: false,
+      },
+    ])
+  }
+
+  function removeSpeakerDraft(key: string) {
+    setSpeakerDrafts((current) => {
+      const draft = current.find((d) => d.key === key)
+      if (draft?.previewUrl) {
+        URL.revokeObjectURL(draft.previewUrl)
+        speakerPreviewUrlsRef.current.delete(draft.key)
+      }
+      return current.filter((d) => d.key !== key)
+    })
+    if (speakerCropSession?.speakerKey === key) closeSpeakerCropper()
+  }
+
+  function updateSpeakerDraft(key: string, field: 'name' | 'title' | 'organization', value: string) {
+    setSpeakerDrafts((current) =>
+      current.map((draft) => (draft.key === key ? { ...draft, [field]: value } : draft))
+    )
+  }
+
+  function triggerSpeakerImageSelect(key: string) {
+    speakerImageTargetKeyRef.current = key
+    speakerImageInputRef.current?.click()
+  }
+
+  async function onSpeakerImageSelected(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    const targetKey = speakerImageTargetKeyRef.current
+    if (!file || !targetKey) return
+    if (!allowedImageMimeTypes.has(file.type)) {
+      setToast({ message: 'Unsupported image format', tone: 'error' })
+      return
+    }
+    setSpeakerDrafts((current) =>
+      current.map((d) => (d.key === targetKey ? { ...d, originalFile: file } : d))
+    )
+    openSpeakerCropper(file, targetKey)
+  }
+
+  function openSpeakerCropper(file: File, speakerKey: string) {
+    if (speakerCropObjectUrlRef.current) {
+      URL.revokeObjectURL(speakerCropObjectUrlRef.current)
+    }
+    const sourceUrl = URL.createObjectURL(file)
+    speakerCropObjectUrlRef.current = sourceUrl
+    setSpeakerCropSession({ speakerKey, sourceUrl, fileName: file.name, mimeType: file.type })
+    setSpeakerCropPosition({ x: 0, y: 0 })
+    setSpeakerCropZoom(1)
+    setSpeakerCropPixels(null)
+  }
+
+  function closeSpeakerCropper() {
+    setSpeakerCropSession(null)
+    setSpeakerCropPosition({ x: 0, y: 0 })
+    setSpeakerCropZoom(1)
+    setSpeakerCropPixels(null)
+    if (speakerCropObjectUrlRef.current) {
+      URL.revokeObjectURL(speakerCropObjectUrlRef.current)
+      speakerCropObjectUrlRef.current = null
+    }
+  }
+
+  function openSpeakerReCrop(key: string) {
+    const draft = speakerDrafts.find((d) => d.key === key)
+    if (!draft) return
+    const file = draft.originalFile || draft.croppedFile
+    if (!file) return
+    openSpeakerCropper(file, key)
+  }
+
+  function deleteSpeakerImage(key: string) {
+    setSpeakerDrafts((current) =>
+      current.map((draft) => {
+        if (draft.key !== key) return draft
+        if (draft.previewUrl) {
+          URL.revokeObjectURL(draft.previewUrl)
+          speakerPreviewUrlsRef.current.delete(draft.key)
+        }
+        return { ...draft, originalFile: null, croppedFile: null, previewUrl: null, publicUrl: '' }
+      })
+    )
+    if (speakerCropSession?.speakerKey === key) closeSpeakerCropper()
+  }
+
+  async function uploadSpeakerImage(file: File): Promise<string> {
+    const uploadRes = await fetch('/api/upload/presigned', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        folder: 'speakers',
+        entityId: form.id || 'new',
+        filename: file.name,
+        contentType: file.type,
+        size: file.size,
+      }),
+    })
+    if (!uploadRes.ok) throw new Error('Failed to create upload URL')
+    const uploadData = await uploadRes.json()
+    const uploadUrl = uploadData?.data?.uploadUrl as string | undefined
+    const publicUrl = uploadData?.data?.publicUrl as string | undefined
+    if (!uploadUrl || !publicUrl) throw new Error('Invalid upload response')
+    const putRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    })
+    if (!putRes.ok) throw new Error('Failed to upload image')
+    return publicUrl
+  }
+
+  async function applySpeakerCrop() {
+    if (!speakerCropSession || !speakerCropPixels) return
+    const { speakerKey, sourceUrl, fileName, mimeType } = speakerCropSession
+    setIsApplyingSpeakerCrop(true)
+    setSpeakerDrafts((current) =>
+      current.map((d) => (d.key === speakerKey ? { ...d, isUploading: true } : d))
+    )
+    try {
+      const croppedFile = await cropImageToFile({ sourceUrl, cropPixels: speakerCropPixels, fileName, mimeType })
+      const newPreviewUrl = URL.createObjectURL(croppedFile)
+      const publicUrl = await uploadSpeakerImage(croppedFile)
+      setSpeakerDrafts((current) =>
+        current.map((draft) => {
+          if (draft.key !== speakerKey) return draft
+          if (draft.previewUrl) URL.revokeObjectURL(draft.previewUrl)
+          speakerPreviewUrlsRef.current.set(draft.key, newPreviewUrl)
+          return { ...draft, croppedFile, previewUrl: newPreviewUrl, publicUrl, isUploading: false }
+        })
+      )
+      closeSpeakerCropper()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Image upload failed'
+      setToast({ message, tone: 'error' })
+      setSpeakerDrafts((current) =>
+        current.map((d) => (d.key === speakerKey ? { ...d, isUploading: false } : d))
+      )
+    } finally {
+      setIsApplyingSpeakerCrop(false)
     }
   }
 
@@ -1105,6 +1337,7 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         throw new Error('Start and end dates are required')
       }
 
+      const validSpeakerDrafts = speakerDrafts.filter((d) => d.name.trim())
       const payload = {
         ...form,
         timezone: safeTimezone,
@@ -1115,9 +1348,18 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         onlineUrl: form.onlineUrl || null,
         coverImage: form.coverImage || null,
         bottomImage: form.bottomImage || null,
-        speakerNames: parseNameList(form.speakerNames),
-        organizerNames: parseNameList(form.organizerNames),
-        sponsorNames: parseNameList(form.sponsorNames),
+        speakerNames: mode === 'create'
+          ? validSpeakerDrafts.map((d) => d.name.trim())
+          : parseNameList(form.speakerNames),
+        organizerNames: mode === 'create'
+          ? validSpeakerDrafts.map((d) => d.title)
+          : parseNameList(form.organizerNames),
+        sponsorNames: mode === 'create'
+          ? validSpeakerDrafts.map((d) => d.organization)
+          : parseNameList(form.sponsorNames),
+        speakerPhotos: mode === 'create'
+          ? validSpeakerDrafts.map((d) => d.publicUrl)
+          : undefined,
         categoryIds: form.categoryIds,
         ticketTypes: undefined,
         ticketTypeId: undefined,
@@ -1277,95 +1519,178 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
         className="hidden"
         disabled={isUploadingBanner}
       />
-      <button
-        type="button"
-        onClick={() => bannerInputRef.current?.click()}
-        disabled={isUploadingBanner}
-        onDragEnter={(event) => onImageDragEnter(event, 'coverImage')}
-        onDragOver={(event) => onImageDragOver(event, 'coverImage')}
-        onDragLeave={(event) => onImageDragLeave(event, 'coverImage')}
-        onDrop={(event) => {
-          void onImageDrop(event, 'coverImage')
-        }}
-        aria-label={bannerImageSrc ? 'Change banner image' : 'Add banner image'}
-        className={`group relative block aspect-[16/9] w-full cursor-pointer overflow-hidden rounded-xl border-4 bg-gray-900 text-left transition-shadow duration-200 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
-          isBannerDropActive
-            ? 'border-blue-500 ring-2 ring-blue-500/40'
-            : bannerImageSrc
-              ? 'border-blue-500'
-              : 'border-dashed border-blue-400'
-        }`}
-      >
-        {bannerImageSrc ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={bannerImageSrc}
-            alt="Event banner"
-            className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.01] group-hover:brightness-95 group-focus-visible:brightness-95"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-r from-slate-700 to-slate-900" />
-        )}
+      <input
+        ref={speakerImageInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        onChange={(event) => void onSpeakerImageSelected(event)}
+        className="hidden"
+      />
+      <section className="space-y-4 border-b border-[#d1d5dc] pb-4">
+        <h3 className="text-2xl font-bold text-black">Header Image</h3>
 
-        {bannerImageSrc ? (
-          <div
-            className={`pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35 p-4 transition-opacity duration-200 ${
-              isUploadingBanner || isBannerDropActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'
-            }`}
-          >
-            <span className="inline-flex rounded-md bg-black/60 px-3 py-1.5 text-sm font-medium text-white">
-              {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop banner image' : 'Click to change banner image'}
-            </span>
-          </div>
-        ) : (
-          <div
-            className={`pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center transition-colors duration-200 ${
-              isUploadingBanner || isBannerDropActive
-                ? 'bg-black/55'
-                : 'bg-black/30 group-hover:bg-black/40 group-focus-visible:bg-black/40'
-            }`}
-          >
-            <Upload className="h-5 w-5 text-white/90" aria-hidden="true" />
-            <p className="text-base font-medium text-white">
-              {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop banner image' : 'Click to add banner image'}
-            </p>
-            <p className="text-xs text-gray-200">
-              {isUploadingBanner ? 'Please wait...' : isBannerDropActive ? 'Release to upload' : 'or drag and drop'}
-            </p>
-          </div>
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={() => bannerInputRef.current?.click()}
+          disabled={isUploadingBanner}
+          onDragEnter={(event) => onImageDragEnter(event, 'coverImage')}
+          onDragOver={(event) => onImageDragOver(event, 'coverImage')}
+          onDragLeave={(event) => onImageDragLeave(event, 'coverImage')}
+          onDrop={(event) => {
+            void onImageDrop(event, 'coverImage')
+          }}
+          aria-label={bannerImageSrc ? 'Change banner image' : 'Add banner image'}
+          className={`group relative w-full cursor-pointer overflow-hidden rounded-[14px] border-[1.6px] text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5c8bd9] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70 ${
+            isBannerDropActive
+              ? 'border-[#5c8bd9] bg-blue-50/30'
+              : bannerImageSrc
+                ? 'border-[#d1d5dc]'
+                : 'border-[#d1d5dc] bg-white hover:border-[#5c8bd9] hover:bg-blue-50/10'
+          }`}
+        >
+          {bannerImageSrc ? (
+            <div className="relative aspect-[16/9]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={bannerImageSrc}
+                alt="Event banner"
+                className="h-full w-full object-cover transition duration-200 group-hover:brightness-90 group-focus-visible:brightness-90"
+              />
+              <div
+                className={`absolute inset-0 flex items-center justify-center bg-black/30 transition-opacity duration-200 ${
+                  isUploadingBanner || isBannerDropActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'
+                }`}
+              >
+                <span className="rounded-md bg-black/60 px-3 py-1.5 text-sm font-medium text-white">
+                  {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop image' : 'Click to change image'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className={`flex flex-col items-center justify-center gap-[6px] py-[33px] ${isBannerDropActive ? 'bg-blue-50/30' : ''}`}>
+              <Upload className="h-12 w-12 text-[#5c8bd9]" aria-hidden="true" />
+              <p className="text-base font-medium text-[#4a5565]">
+                {isUploadingBanner ? 'Uploading...' : isBannerDropActive ? 'Drop banner image' : 'Click to upload header image'}
+              </p>
+            </div>
+          )}
+        </button>
 
-      {canEditCoverImage || croppedImageFiles.coverImage ? (
-        <div className="flex flex-wrap gap-3">
-          {canEditCoverImage ? (
-            <Button
-              type="button"
-              variant="outline"
-              isLoading={isPreparingCrop === 'coverImage'}
-              onClick={() => {
-                void openExistingCrop('coverImage', bannerImageSrc)
-              }}
-            >
-              Edit / Crop banner
-            </Button>
-          ) : null}
-          {croppedImageFiles.coverImage ? (
-            <Button type="button" variant="outline" onClick={() => void resetImageToOriginal('coverImage')}>
-              Reset banner
-            </Button>
-          ) : null}
+        {canEditCoverImage || croppedImageFiles.coverImage ? (
+          <div className="flex flex-wrap gap-3">
+            {canEditCoverImage ? (
+              <Button
+                type="button"
+                variant="outline"
+                isLoading={isPreparingCrop === 'coverImage'}
+                onClick={() => {
+                  void openExistingCrop('coverImage', bannerImageSrc)
+                }}
+              >
+                Edit / Crop banner
+              </Button>
+            ) : null}
+            {croppedImageFiles.coverImage ? (
+              <Button type="button" variant="outline" isLoading={isUploadingBanner} onClick={() => void resetImageToOriginal('coverImage')}>
+                Undo crop
+              </Button>
+            ) : null}
+            {canEditCoverImage ? (
+              <Button type="button" variant="outline" onClick={() => deleteUploadedImage('coverImage')}>
+                Delete image
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
+        {fieldErrors.coverImage ? <p className="text-sm text-red-600">{fieldErrors.coverImage}</p> : null}
+      </section>
+
+      <section className="space-y-4 border-b border-[#d1d5dc] pb-4">
+        <h3 className="text-2xl font-bold text-black">Event Information</h3>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="title" required className="text-base font-semibold text-black">Event Title</Label>
+            <Input
+              id="title"
+              placeholder="Enter event title"
+              value={form.title}
+              error={fieldErrors.title}
+              onChange={(e) => updateField('title', e.target.value)}
+              className="h-10 rounded-[10px] border-[0.8px] border-[#d1d5dc] bg-[#f9fafb] px-3 py-2 text-sm placeholder:text-[#99a1af] focus:ring-[#5c8bd9]"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="sponsorNames" required className="text-base font-semibold text-black">Organization</Label>
+            <Input
+              id="sponsorNames"
+              placeholder="Organization name"
+              value={form.sponsorNames || ''}
+              onChange={(e) => updateField('sponsorNames', e.target.value)}
+              className="h-10 rounded-[10px] border-[0.8px] border-[#d1d5dc] bg-[#f9fafb] px-3 py-2 text-sm placeholder:text-[#99a1af] focus:ring-[#5c8bd9]"
+            />
+          </div>
         </div>
-      ) : null}
-      {fieldErrors.coverImage ? <p className="text-sm text-red-600">{fieldErrors.coverImage}</p> : null}
+
+        {categories.length > 0 ? (
+          <div className="flex flex-col gap-2" ref={categoryDropdownRef}>
+            <Label required className="text-base font-semibold text-black">Category</Label>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsCategoryOpen((open) => !open)}
+                className="flex h-10 w-full items-center justify-between rounded-[10px] border-[0.8px] border-[#d1d5dc] bg-[#f9fafb] px-3 text-sm hover:border-[#5c8bd9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5c8bd9]"
+              >
+                <span className={form.categoryIds?.length ? 'text-gray-900' : 'text-[#99a1af]'}>
+                  {form.categoryIds?.length
+                    ? categories.filter((c) => form.categoryIds!.includes(c.id)).map((c) => c.name).join(', ')
+                    : 'Select a category'}
+                </span>
+                <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+              </button>
+              {isCategoryOpen ? (
+                <div className="absolute top-[calc(100%+8px)] left-0 z-50 w-[220px] rounded-2xl bg-white py-2 shadow-2xl max-h-72 overflow-y-auto">
+                  {categories.map((cat) => {
+                    const selected = form.categoryIds?.includes(cat.id)
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          const current = form.categoryIds || []
+                          updateField(
+                            'categoryIds',
+                            selected ? current.filter((id) => id !== cat.id) : [...current, cat.id],
+                          )
+                        }}
+                        className={`w-full text-left px-4 py-3 text-[14px] transition-colors hover:bg-gray-50 ${selected ? 'font-semibold text-blue-600' : 'text-gray-700'}`}
+                      >
+                        {cat.name}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="description" required className="text-base font-semibold text-black">Description</Label>
+          <textarea
+            id="description"
+            className="min-h-[169.6px] w-full resize-y rounded-[10px] border-[0.8px] border-[#d1d5dc] bg-[#f9fafb] px-4 py-3 text-base placeholder:text-[#99a1af] focus:outline-none focus:ring-2 focus:ring-[#5c8bd9] focus:border-transparent"
+            placeholder="Describe your event..."
+            value={form.description || ''}
+            onChange={(e) => updateField('description', e.target.value)}
+          />
+          {fieldErrors.description ? <p className="mt-1 text-sm text-red-600">{fieldErrors.description}</p> : null}
+        </div>
+      </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
         <h3 className="text-3xl font-semibold text-gray-900">Event Header</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <Label htmlFor="title" required>Title</Label>
-            <Input id="title" value={form.title} error={fieldErrors.title} onChange={(e) => updateField('title', e.target.value)} />
-          </div>
           <div>
             <Label htmlFor="startDate" required>Start</Label>
             <Input
@@ -1456,61 +1781,123 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
       </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">Overview</h3>
-        <div>
-          <Label htmlFor="description" required>Description</Label>
-          <textarea
-            id="description"
-            className="min-h-40 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-            value={form.description || ''}
-            onChange={(e) => updateField('description', e.target.value)}
-          />
-          {fieldErrors.description ? <p className="mt-1 text-sm text-red-600">{fieldErrors.description}</p> : null}
-        </div>
-      </section>
-
-      <section className="space-y-5 border-b border-gray-300 pb-6">
-        <h3 className="text-3xl font-semibold text-gray-900">Program</h3>
-        <p className="text-sm text-gray-600">
-          {children ? 'Manage people and schedule in one place so agenda items can be linked to speakers.' : 'Add program people now. After your first save, you can manage detailed speakers and agenda here.'}
-        </p>
-        <div className={`grid grid-cols-1 gap-4 ${mode === 'create' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-          {mode === 'create' ? (
-            <div>
-              <Label htmlFor="speakerNames">Speakers</Label>
-              <Input
-                id="speakerNames"
-                placeholder="Jane Doe, John Doe"
-                value={form.speakerNames || ''}
-                onChange={(e) => updateField('speakerNames', e.target.value)}
-              />
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-3xl font-bold text-black">Speakers</h3>
+              <button
+                type="button"
+                onClick={addSpeakerDraft}
+                className="flex h-10 items-center gap-2 rounded-[10px] bg-[#5c8bd9] px-4 text-base font-semibold text-white transition-colors hover:bg-[#4a7bc9]"
+              >
+                <span aria-hidden="true" className="text-base leading-none">+</span>
+                Add Speaker
+              </button>
             </div>
-          ) : null}
-          <div>
-            <Label htmlFor="organizerNames">Job title</Label>
-            <Input
-              id="organizerNames"
-              placeholder="Developer, Consultant"
-              value={form.organizerNames || ''}
-              onChange={(e) => updateField('organizerNames', e.target.value)}
-            />
-          </div>
-          <div>
-            <Label htmlFor="sponsorNames">Organization</Label>
-            <Input
-              id="sponsorNames"
-              placeholder="Tech Corp, Innovation Inc"
-              value={form.sponsorNames || ''}
-              onChange={(e) => updateField('sponsorNames', e.target.value)}
-            />
-          </div>
-        </div>
 
-        {children ? (
-          <div className="space-y-5 border-t border-gray-200 pt-5">
-            {children}
+            <div className="space-y-4">
+              {speakerDrafts.length === 0 && (
+                <div className="flex h-[88px] w-full items-center justify-center">
+                  <p className="text-center text-base text-[#6a7282]">
+                    No speakers added. Click &quot;Add Speaker&quot; to add one.
+                  </p>
+                </div>
+              )}
+              {speakerDrafts.map((draft, index) => (
+                <div key={draft.key} className="rounded-[10px] border border-[#828283] bg-[#f9fafb] p-4">
+                  <div className="mb-4 flex items-center justify-between">
+                    <span className="text-lg font-semibold text-gray-800">Speaker {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSpeakerDraft(draft.key)}
+                      className="text-gray-400 transition-colors hover:text-red-500"
+                      aria-label={`Remove Speaker ${index + 1}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    {/* Circular image area */}
+                    <div className="shrink-0">
+                      {draft.previewUrl || draft.publicUrl ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openSpeakerReCrop(draft.key)}
+                            className="relative h-24 w-24 overflow-hidden rounded-full border border-[#d1d5dc] bg-[#e5e7eb]"
+                            aria-label="Edit photo"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={draft.previewUrl ?? draft.publicUrl}
+                              alt={draft.name || `Speaker ${index + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                            {draft.isUploading ? (
+                              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                                <span className="text-xs font-medium text-white">Uploading…</span>
+                              </div>
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/30 opacity-0 transition-opacity hover:opacity-100">
+                                <span className="text-xs font-medium text-white">Edit</span>
+                              </div>
+                            )}
+                          </button>
+                          {!draft.isUploading ? (
+                            <button
+                              type="button"
+                              onClick={() => deleteSpeakerImage(draft.key)}
+                              className="text-xs text-gray-400 transition-colors hover:text-red-500"
+                            >
+                              Delete
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => triggerSpeakerImageSelect(draft.key)}
+                          className="flex h-24 w-24 flex-col items-center justify-center rounded-full border border-[#d1d5dc] bg-[#e5e7eb] transition-colors hover:bg-gray-200"
+                          aria-label="Upload photo"
+                        >
+                          <User className="h-8 w-8 text-gray-400" />
+                          <span className="mt-1 text-xs text-gray-500">Upload</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Fields */}
+                    <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div>
+                        <Label>Name</Label>
+                        <Input
+                          value={draft.name}
+                          placeholder="Speaker name"
+                          onChange={(e) => updateSpeakerDraft(draft.key, 'name', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Title</Label>
+                        <Input
+                          value={draft.title}
+                          placeholder="Job title"
+                          onChange={(e) => updateSpeakerDraft(draft.key, 'title', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Organization</Label>
+                        <Input
+                          value={draft.organization}
+                          placeholder="Company/Organization"
+                          onChange={(e) => updateSpeakerDraft(draft.key, 'organization', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ) : null}
       </section>
 
       <section className="space-y-5 border-b border-gray-300 pb-6">
@@ -1725,20 +2112,6 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
               onChange={(e) => updateField('cancellationDeadlineHours', Number(e.target.value))}
             />
           </div>
-          <div className="md:col-span-2">
-            <Label htmlFor="categoryIds">Category IDs (comma separated)</Label>
-            <Input
-              id="categoryIds"
-              value={form.categoryIds?.join(',') || ''}
-              onChange={(e) => {
-                const ids = e.target.value
-                  .split(',')
-                  .map((item) => item.trim())
-                  .filter(Boolean)
-                updateField('categoryIds', ids)
-              }}
-            />
-          </div>
         </div>
       </section>
 
@@ -1815,6 +2188,51 @@ export function EventForm({ mode, initialData, children }: EventFormProps) {
                 </Button>
               ) : null}
               <Button type="button" onClick={applyCrop} isLoading={isApplyingCrop}>
+                Apply crop
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {speakerCropSession ? (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-4 shadow-xl">
+            <h4 className="text-lg font-semibold text-gray-900">Crop speaker photo</h4>
+            <p className="mt-1 text-sm text-gray-600">Adjust zoom and position, then apply crop.</p>
+
+            <div className="relative mt-4 h-72 w-full overflow-hidden rounded-lg bg-gray-900">
+              <Cropper
+                image={speakerCropSession.sourceUrl}
+                crop={speakerCropPosition}
+                zoom={speakerCropZoom}
+                aspect={1}
+                cropShape="round"
+                onCropChange={setSpeakerCropPosition}
+                onZoomChange={setSpeakerCropZoom}
+                onCropComplete={(_, croppedAreaPixels) => setSpeakerCropPixels(croppedAreaPixels)}
+              />
+            </div>
+
+            <div className="mt-4">
+              <Label htmlFor="speakerCropZoom">Zoom</Label>
+              <input
+                id="speakerCropZoom"
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={speakerCropZoom}
+                onChange={(e) => setSpeakerCropZoom(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button type="button" variant="outline" onClick={closeSpeakerCropper}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={applySpeakerCrop} isLoading={isApplyingSpeakerCrop}>
                 Apply crop
               </Button>
             </div>

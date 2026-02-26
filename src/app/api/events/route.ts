@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       speakerNames,
       organizerNames,
       sponsorNames,
+      speakerPhotos,
       ...input
     } = parsed.data
 
@@ -68,7 +69,8 @@ export async function POST(request: NextRequest) {
     const peopleCreateData = buildPeopleCreateData(
       normalizedSpeakerNames,
       normalizedOrganizerNames,
-      normalizedSponsorNames
+      normalizedSponsorNames,
+      speakerPhotos
     )
 
     if (categoryIds.length > 0) {

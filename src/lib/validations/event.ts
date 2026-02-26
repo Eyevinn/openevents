@@ -24,6 +24,7 @@ const eventSchemaBase = z.object({
   speakerNames: z.array(z.string()).optional(),
   organizerNames: z.array(z.string()).optional(),
   sponsorNames: z.array(z.string()).optional(),
+  speakerPhotos: z.array(z.string()).optional(),
   autoCreateFreeTicket: z.boolean().optional().default(false),
 })
 

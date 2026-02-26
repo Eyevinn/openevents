@@ -3,7 +3,6 @@ import { getCurrentUser, hasRole } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { EventForm } from '@/components/events/EventForm'
 import { EventStatusActions } from '@/components/events/EventStatusActions'
-import { ProgramSection } from '@/components/events/ProgramSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -63,37 +62,43 @@ export default async function EditEventPage({ params }: PageProps) {
     )
   }
 
-  const event = await prisma.event.findFirst({
-    where: {
-      id,
-      organizerId: organizer.id,
-    },
-    include: {
-      categories: {
-        select: {
-          categoryId: true,
+  const [event, categories] = await Promise.all([
+    prisma.event.findFirst({
+      where: {
+        id,
+        organizerId: organizer.id,
+      },
+      include: {
+        categories: {
+          select: {
+            categoryId: true,
+          },
+        },
+        agendaItems: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+        speakers: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
+        ticketTypes: {
+          where: { isVisible: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        media: {
+          where: { type: 'IMAGE' },
+          orderBy: { sortOrder: 'asc' },
         },
       },
-      agendaItems: {
-        orderBy: {
-          sortOrder: 'asc',
-        },
-      },
-      speakers: {
-        orderBy: {
-          sortOrder: 'asc',
-        },
-      },
-      ticketTypes: {
-        where: { isVisible: true },
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-      },
-      media: {
-        where: { type: 'IMAGE' },
-        orderBy: { sortOrder: 'asc' },
-      },
-    },
-  })
+    }),
+    prisma.category.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ])
 
   if (!event) {
     notFound()
@@ -116,13 +121,12 @@ export default async function EditEventPage({ params }: PageProps) {
     .map((speaker) => speaker.name)
     .join(', ')
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-10">
-      <h1 className="text-3xl font-bold text-gray-900">Edit Event</h1>
-
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <EventStatusActions eventId={event.id} status={event.status} />
 
       <EventForm
         mode="edit"
+        categories={categories}
         initialData={{
           id: event.id,
           slug: event.slug,
@@ -157,28 +161,7 @@ export default async function EditEventPage({ params }: PageProps) {
           cancellationDeadlineHours: event.cancellationDeadlineHours,
           categoryIds: event.categories.map((item) => item.categoryId),
         }}
-      >
-        <ProgramSection
-          eventId={event.id}
-          speakers={regularSpeakers.map((speaker) => ({
-            id: speaker.id,
-            name: speaker.name,
-            title: speaker.title,
-            bio: speaker.bio,
-            photo: speaker.photo,
-            sortOrder: speaker.sortOrder,
-          }))}
-          agendaItems={event.agendaItems.map((item) => ({
-            id: item.id,
-            title: item.title,
-            description: item.description,
-            startTime: item.startTime,
-            endTime: item.endTime,
-            speakerId: item.speakerId,
-            sortOrder: item.sortOrder,
-          }))}
-        />
-      </EventForm>
+      />
     </div>
   )
 }

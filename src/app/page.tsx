@@ -15,6 +15,7 @@ export default async function HomePage() {
     where: {
       status: 'PUBLISHED',
       visibility: 'PUBLIC',
+      deletedAt: null,
     },
     include: {
       organizer: {
