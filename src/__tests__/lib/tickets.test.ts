@@ -71,10 +71,9 @@ describe('Discount Code Functions', () => {
   })
 
   describe('discount use helpers', () => {
-    it('should use the higher of the two counters as consumed ticket uses', () => {
+    it('should use redeemedTicketCount as consumed ticket uses', () => {
       expect(
         getDiscountCodeConsumedTicketCount({
-          usedCount: 2,
           redeemedTicketCount: 5,
         })
       ).toBe(5)
@@ -84,7 +83,6 @@ describe('Discount Code Functions', () => {
       expect(
         getDiscountCodeRemainingTicketUses({
           maxUses: 10,
-          usedCount: 3,
           redeemedTicketCount: 4,
         })
       ).toBe(6)

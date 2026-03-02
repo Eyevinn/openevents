@@ -36,13 +36,13 @@ export function normalizeDiscountCode(code: string): string {
 }
 
 export function getDiscountCodeConsumedTicketCount(
-  discountCode: Pick<DiscountCode, 'usedCount' | 'redeemedTicketCount'>
+  discountCode: Pick<DiscountCode, 'redeemedTicketCount'>
 ): number {
-  return Math.max(discountCode.redeemedTicketCount, discountCode.usedCount)
+  return discountCode.redeemedTicketCount
 }
 
 export function getDiscountCodeRemainingTicketUses(
-  discountCode: Pick<DiscountCode, 'maxUses' | 'usedCount' | 'redeemedTicketCount'>
+  discountCode: Pick<DiscountCode, 'maxUses' | 'redeemedTicketCount'>
 ): number | null {
   if (discountCode.maxUses === null) {
     return null

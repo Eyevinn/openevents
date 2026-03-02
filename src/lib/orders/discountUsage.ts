@@ -34,9 +34,6 @@ export async function claimDiscountCodeUsage(
   const claimed = await tx.discountCode.updateMany({
     where: {
       id: discountCodeId,
-      usedCount: {
-        lte: maxUses - usageUnits,
-      },
       redeemedTicketCount: {
         lte: maxUses - usageUnits,
       },
@@ -61,35 +58,70 @@ export async function releaseDiscountCodeUsage(
 ): Promise<number> {
   if (usageUnits <= 0) return 0
 
-  const discountCode = await tx.discountCode.findUnique({
-    where: { id: discountCodeId },
-    select: {
-      usedCount: true,
-      redeemedTicketCount: true,
+  const releasedUsedCount = await tx.discountCode.updateMany({
+    where: {
+      id: discountCodeId,
+      usedCount: {
+        gte: usageUnits,
+      },
+    },
+    data: {
+      usedCount: {
+        decrement: usageUnits,
+      },
     },
   })
 
-  if (!discountCode) {
-    return 0
-  }
+  const clampedUsedCount = releasedUsedCount.count === 0
+    ? await tx.discountCode.updateMany({
+        where: {
+          id: discountCodeId,
+          usedCount: {
+            gt: 0,
+          },
+        },
+        data: {
+          usedCount: 0,
+        },
+      })
+    : { count: 0 }
 
-  const nextUsedCount = Math.max(0, discountCode.usedCount - usageUnits)
-  const nextRedeemedTicketCount = Math.max(0, discountCode.redeemedTicketCount - usageUnits)
+  const releasedRedeemedTicketCount = await tx.discountCode.updateMany({
+    where: {
+      id: discountCodeId,
+      redeemedTicketCount: {
+        gte: usageUnits,
+      },
+    },
+    data: {
+      redeemedTicketCount: {
+        decrement: usageUnits,
+      },
+    },
+  })
+
+  const clampedRedeemedTicketCount = releasedRedeemedTicketCount.count === 0
+    ? await tx.discountCode.updateMany({
+        where: {
+          id: discountCodeId,
+          redeemedTicketCount: {
+            gt: 0,
+          },
+        },
+        data: {
+          redeemedTicketCount: 0,
+        },
+      })
+    : { count: 0 }
 
   if (
-    nextUsedCount === discountCode.usedCount &&
-    nextRedeemedTicketCount === discountCode.redeemedTicketCount
+    releasedUsedCount.count === 0 &&
+    clampedUsedCount.count === 0 &&
+    releasedRedeemedTicketCount.count === 0 &&
+    clampedRedeemedTicketCount.count === 0
   ) {
     return 0
   }
-
-  await tx.discountCode.update({
-    where: { id: discountCodeId },
-    data: {
-      usedCount: nextUsedCount,
-      redeemedTicketCount: nextRedeemedTicketCount,
-    },
-  })
 
   return usageUnits
 }

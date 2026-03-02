@@ -43,7 +43,7 @@ function createFakeTx(initialUsedCount: number, initialRedeemedTicketCount: numb
       }: {
         where: {
           id: string
-          usedCount?: { gte?: number; gt?: number }
+          usedCount?: { gte?: number; gt?: number; lte?: number }
           redeemedTicketCount?: { lte?: number; gte?: number; gt?: number }
         }
         data: {
@@ -55,6 +55,9 @@ function createFakeTx(initialUsedCount: number, initialRedeemedTicketCount: numb
           return { count: 0 }
         }
         if (where.usedCount?.gt !== undefined && !(usedCount > where.usedCount.gt)) {
+          return { count: 0 }
+        }
+        if (where.usedCount?.lte !== undefined && !(usedCount <= where.usedCount.lte)) {
           return { count: 0 }
         }
         if (
@@ -158,6 +161,14 @@ describe('claimDiscountCodeUsage', () => {
     expect(claimed).toBe(true)
     expect(getUsedCount()).toBe(9)
     expect(getRedeemedTicketCount()).toBe(9)
+  })
+
+  it('ignores the legacy usedCount when enforcing limited codes', async () => {
+    const { tx, getUsedCount, getRedeemedTicketCount } = createFakeTx(8, 1)
+    const claimed = await claimDiscountCodeUsage(tx, 'dc-1', 3, 10)
+    expect(claimed).toBe(true)
+    expect(getUsedCount()).toBe(11)
+    expect(getRedeemedTicketCount()).toBe(4)
   })
 
   it('does not oversubscribe when two claims compete for the final ticket uses', async () => {
