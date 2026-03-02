@@ -23,6 +23,9 @@ export async function claimDiscountCodeUsage(
         usedCount: {
           increment: usageUnits,
         },
+        redeemedTicketCount: {
+          increment: usageUnits,
+        },
       },
     })
     return true
@@ -34,9 +37,15 @@ export async function claimDiscountCodeUsage(
       usedCount: {
         lte: maxUses - usageUnits,
       },
+      redeemedTicketCount: {
+        lte: maxUses - usageUnits,
+      },
     },
     data: {
       usedCount: {
+        increment: usageUnits,
+      },
+      redeemedTicketCount: {
         increment: usageUnits,
       },
     },
@@ -52,35 +61,35 @@ export async function releaseDiscountCodeUsage(
 ): Promise<number> {
   if (usageUnits <= 0) return 0
 
-  const released = await tx.discountCode.updateMany({
-    where: {
-      id: discountCodeId,
-      usedCount: {
-        gte: usageUnits,
-      },
-    },
-    data: {
-      usedCount: {
-        decrement: usageUnits,
-      },
+  const discountCode = await tx.discountCode.findUnique({
+    where: { id: discountCodeId },
+    select: {
+      usedCount: true,
+      redeemedTicketCount: true,
     },
   })
 
-  if (released.count > 0) {
-    return usageUnits
+  if (!discountCode) {
+    return 0
   }
 
-  const clamped = await tx.discountCode.updateMany({
-    where: {
-      id: discountCodeId,
-      usedCount: {
-        gt: 0,
-      },
-    },
+  const nextUsedCount = Math.max(0, discountCode.usedCount - usageUnits)
+  const nextRedeemedTicketCount = Math.max(0, discountCode.redeemedTicketCount - usageUnits)
+
+  if (
+    nextUsedCount === discountCode.usedCount &&
+    nextRedeemedTicketCount === discountCode.redeemedTicketCount
+  ) {
+    return 0
+  }
+
+  await tx.discountCode.update({
+    where: { id: discountCodeId },
     data: {
-      usedCount: 0,
+      usedCount: nextUsedCount,
+      redeemedTicketCount: nextRedeemedTicketCount,
     },
   })
 
-  return clamped.count > 0 ? usageUnits : 0
+  return usageUnits
 }

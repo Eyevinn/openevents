@@ -9,6 +9,9 @@ import {
   fromMoneyCents,
   calculateDiscountAmount,
   calculateOrderTotals,
+  getDiscountCodeConsumedTicketCount,
+  getDiscountCodeRemainingTicketUses,
+  getSelectedTicketQuantity,
   normalizeDiscountCode,
   isDiscountCodeActive,
 } from '@/lib/tickets'
@@ -67,6 +70,40 @@ describe('Discount Code Functions', () => {
     })
   })
 
+  describe('discount use helpers', () => {
+    it('should use the higher of the two counters as consumed ticket uses', () => {
+      expect(
+        getDiscountCodeConsumedTicketCount({
+          usedCount: 2,
+          redeemedTicketCount: 5,
+        })
+      ).toBe(5)
+    })
+
+    it('should return remaining ticket uses for limited codes', () => {
+      expect(
+        getDiscountCodeRemainingTicketUses({
+          maxUses: 10,
+          usedCount: 3,
+          redeemedTicketCount: 4,
+        })
+      ).toBe(6)
+    })
+
+    it('should sum only the applicable selected ticket quantities', () => {
+      expect(
+        getSelectedTicketQuantity(
+          {
+            vip: 2,
+            general: 3,
+            child: -1,
+          },
+          ['vip', 'child']
+        )
+      ).toBe(2)
+    })
+  })
+
   describe('isDiscountCodeActive', () => {
     const baseCode: Omit<DiscountCode, 'id' | 'eventId' | 'createdAt' | 'updatedAt'> = {
       code: 'TEST',
@@ -78,6 +115,7 @@ describe('Discount Code Functions', () => {
       maxUses: null,
       minCartAmount: null,
       usedCount: 0,
+      redeemedTicketCount: 0,
     }
 
     it('should return true for active code with no restrictions', () => {
@@ -103,12 +141,12 @@ describe('Discount Code Functions', () => {
     })
 
     it('should return false if maxUses reached', () => {
-      const code = { ...baseCode, maxUses: 10, usedCount: 10 } as DiscountCode
+      const code = { ...baseCode, maxUses: 10, redeemedTicketCount: 10 } as DiscountCode
       expect(isDiscountCodeActive(code)).toBe(false)
     })
 
     it('should return true if maxUses not yet reached', () => {
-      const code = { ...baseCode, maxUses: 10, usedCount: 9 } as DiscountCode
+      const code = { ...baseCode, maxUses: 10, redeemedTicketCount: 9 } as DiscountCode
       expect(isDiscountCodeActive(code)).toBe(true)
     })
   })
