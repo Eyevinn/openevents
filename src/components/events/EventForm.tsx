@@ -1395,8 +1395,18 @@ export function EventForm({ mode, initialData, initialSpeakers, categories = [],
       if (destination.href === window.location.href) return
 
       if (window.confirm('Discard unsaved changes?')) {
-        bypassNavigationGuardRef.current = true
-        historyGuardActiveRef.current = false
+        event.preventDefault()
+        event.stopPropagation()
+        navigateAfterDiscard(() => {
+          if (destination.origin !== window.location.origin) {
+            window.location.assign(destination.href)
+            return
+          }
+
+          router.push(`${destination.pathname}${destination.search}${destination.hash}`)
+        }, {
+          keepBypassGuard: destination.origin !== window.location.origin,
+        })
         return
       }
 
@@ -1422,7 +1432,7 @@ export function EventForm({ mode, initialData, initialSpeakers, categories = [],
         }, 0)
       }
     }
-  }, [hasUnsavedChanges])
+  }, [hasUnsavedChanges, router])
 
   useEffect(() => {
     if (mode !== 'edit' || !form.id) return
@@ -2509,14 +2519,37 @@ export function EventForm({ mode, initialData, initialSpeakers, categories = [],
     router.push('/dashboard/events')
   }
 
+  function navigateAfterDiscard(callback: () => void, options?: { keepBypassGuard?: boolean }) {
+    const continueNavigation = () => {
+      bypassNavigationGuardRef.current = true
+      historyGuardActiveRef.current = false
+      callback()
+
+      if (!options?.keepBypassGuard) {
+        window.setTimeout(() => {
+          bypassNavigationGuardRef.current = false
+        }, 0)
+      }
+    }
+
+    if (!historyGuardActiveRef.current) {
+      continueNavigation()
+      return
+    }
+
+    bypassNavigationGuardRef.current = true
+    window.history.back()
+    window.setTimeout(continueNavigation, 0)
+  }
+
   function onCancel() {
     if (hasUnsavedChanges && !window.confirm('Discard unsaved changes?')) {
       return
     }
 
-    bypassNavigationGuardRef.current = true
-    historyGuardActiveRef.current = false
-    performCancelNavigation()
+    navigateAfterDiscard(() => {
+      performCancelNavigation()
+    })
   }
 
   const remoteBannerPreviewSrc =
