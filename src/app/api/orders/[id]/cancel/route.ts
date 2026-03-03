@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { Prisma } from '@prisma/client'
 import { z } from 'zod'
-import { requireAuth } from '@/lib/auth'
+import { requireAuth, getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { canAccessOrder } from '@/lib/orders/authorization'
 import { lockTicketTypes } from '@/lib/orders'
@@ -26,9 +26,8 @@ const cancelOrderInputSchema = z.object({
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const { id: orderId } = await context.params
-    const user = await requireAuth()
 
-    // Find the order
+    // Find the order first (before auth check) so we can redirect properly on session expiry
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -53,6 +52,16 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     if (!order) {
       return NextResponse.redirect(`${APP_URL}?error=order_not_found`)
+    }
+
+    // Check authentication - if session expired, still redirect to checkout with cancel notice
+    const user = await getCurrentUser()
+    if (!user) {
+      // Session expired - redirect to checkout with session_expired flag
+      // The checkout page will prompt login but won't lose the context
+      return NextResponse.redirect(
+        `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true&session_expired=true`
+      )
     }
 
     const authorized = canAccessOrder({
@@ -124,10 +133,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true`
     )
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=unauthorized`)
-    }
-
     console.error('[PayPal Cancel] Failed to cancel order:', error)
     return NextResponse.redirect(`${APP_URL}?error=cancel_failed`)
   }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { Prisma, PaymentMethod } from '@prisma/client'
-import { requireAuth } from '@/lib/auth'
+import { getCurrentUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { sendOrderConfirmationEmail } from '@/lib/email'
 import { canAccessOrder } from '@/lib/orders/authorization'
@@ -25,13 +25,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { id: orderId } = await context.params
     const { searchParams } = new URL(request.url)
     const paypalToken = searchParams.get('token')
-    const user = await requireAuth()
 
     if (!paypalToken) {
       return NextResponse.redirect(`${APP_URL}/checkout-error?error=invalid_token`)
     }
 
-    // Find the order
+    // Find the order first (before auth check) so we can redirect properly on session expiry
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -68,6 +67,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (!order) {
       return NextResponse.redirect(`${APP_URL}/checkout-error?error=order_not_found`)
+    }
+
+    // Check authentication - if session expired, redirect to status page instead of 401
+    const user = await getCurrentUser()
+    if (!user) {
+      // Session expired - redirect to a helpful status page
+      // Include the PayPal token so we can check payment status
+      const statusUrl = new URL(`${APP_URL}/checkout-status/${order.orderNumber}`)
+      statusUrl.searchParams.set('session_expired', 'true')
+      statusUrl.searchParams.set('token', paypalToken)
+      return NextResponse.redirect(statusUrl.toString())
     }
 
     const canManageOrder = canAccessOrder({
@@ -279,10 +289,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Redirect to confirmation page
     return NextResponse.redirect(`${APP_URL}/orders/${paidOrder.orderNumber}`)
   } catch (error) {
-    if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     console.error('[Capture] Failed to capture payment:', error)
     return NextResponse.redirect(`${APP_URL}/checkout-error?error=capture_exception`)
   }
