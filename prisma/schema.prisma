@@ -437,7 +437,7 @@ model DiscountCodeTicketType {
 model Order {
   id              String       @id @default(cuid())
   orderNumber     String       @unique
-  userId          String
+  userId          String?
   eventId         String
   discountCodeId  String?
 
@@ -476,7 +476,7 @@ model Order {
   refundReason    String?      @db.Text
   refundNotes     String?      @db.Text
 
-  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   event         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
   discountCode  DiscountCode? @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
   items         OrderItem[]
