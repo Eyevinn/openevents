@@ -327,8 +327,12 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
   }, [selectedItems])
 
   // Pre-fill first attendee slot of the first ticket type with buyer info
+  // Only pre-fill when all required buyer fields are complete
   useEffect(() => {
     if (selectedItems.length === 0) return
+
+    // Don't pre-fill until buyer has entered all required fields
+    if (!buyer.firstName || !buyer.lastName || !buyer.email) return
 
     const firstTypeId = selectedItems[0].ticketTypeId
 
