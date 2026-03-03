@@ -5,9 +5,11 @@ import { useSession, signOut } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { ChevronDown } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 export function Header() {
   const { data: session, status } = useSession()
+  const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const accountMenuRef = useRef<HTMLDivElement | null>(null)
@@ -18,6 +20,11 @@ export function Header() {
   const avatarFallback = (session?.user?.email?.[0] || 'U').toUpperCase()
   const displayName = session?.user?.name?.trim() || session?.user?.email?.split('@')[0] || 'Account'
   const profileHref = isOrganizer ? '/dashboard/profile' : '/profile'
+
+  // Determine if we should show auth UI based on current route
+  const isOrganizerRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
+  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password') || pathname.startsWith('/verify-email')
+  const shouldShowAuthUI = isOrganizerRoute || isAuthPage
 
   useEffect(() => {
     function onPointerDown(event: MouseEvent | TouchEvent) {
@@ -65,7 +72,7 @@ export function Header() {
                 Create Event
               </Link>
             )}
-            {status === 'authenticated' ? (
+            {status === 'authenticated' && shouldShowAuthUI ? (
               <>
                 {canManageEvents && (
                   <Link
@@ -142,7 +149,7 @@ export function Header() {
                   ) : null}
                 </div>
               </>
-            ) : (
+            ) : status === 'unauthenticated' && shouldShowAuthUI ? (
               <div className="flex items-center space-x-4">
                 <Link href="/login">
                   <Button variant="ghost">Sign In</Button>
@@ -151,7 +158,7 @@ export function Header() {
                   <Button>Get Started</Button>
                 </Link>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Mobile menu button */}
@@ -200,7 +207,7 @@ export function Header() {
               </Link>
             )}
 
-            {status === 'authenticated' ? (
+            {status === 'authenticated' && shouldShowAuthUI ? (
               <>
                 {canManageEvents && (
                   <Link
@@ -235,7 +242,7 @@ export function Header() {
                   Sign out
                 </button>
               </>
-            ) : (
+            ) : status === 'unauthenticated' && shouldShowAuthUI ? (
               <>
                 <Link
                   href="/login"
@@ -252,7 +259,7 @@ export function Header() {
                   Get Started
                 </Link>
               </>
-            )}
+            ) : null}
           </div>
         )}
       </nav>
