@@ -184,7 +184,7 @@ export function EventsTable({ events }: EventsTableProps) {
                         Publish
                       </Button>
                     ) : null}
-                    {event.status === 'PUBLISHED' ? (
+                    {event.status === 'PUBLISHED' && new Date(event.endDate) >= new Date() ? (
                       <Button variant="cancel" size="sm" isLoading={busyId === event.id} onClick={() => setPendingCancel({ id: event.id, title: event.title })}>
                         Cancel
                       </Button>

@@ -9,6 +9,7 @@ export default async function DashboardScanPage() {
 
   const where = buildEventWhereClause(organizerProfile, isSuperAdmin, {
     status: { notIn: ['DRAFT', 'CANCELLED'] },
+    endDate: { gte: new Date() },
   })
 
   const events = await prisma.event.findMany({

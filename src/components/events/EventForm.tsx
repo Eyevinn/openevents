@@ -3210,7 +3210,7 @@ export function EventForm({
     editableImageFiles.bottomImage ||
     originalImageFiles.bottomImage,
   );
-  const isPublishedEvent = mode === "edit" && form.status === "PUBLISHED";
+  const isPublishedEvent = mode === "edit" && initialData?.status === "PUBLISHED";
 
   return (
     <div className="space-y-8 px-1 sm:px-0">
@@ -5128,92 +5128,57 @@ export function EventForm({
         </div>
       ) : null}
 
-      {isPublishedEvent ? (
-        <div className="flex flex-wrap justify-end gap-3">
+      <div className="flex justify-end gap-4 border-t border-black/10 pt-6">
+        <Button
+          type="button"
+          onClick={() => setShowPreview(true)}
+          disabled={isSubmitting}
+          className="h-[50px] rounded-[10px] bg-[#E5E7EB] px-4 text-[#4a5565] text-lg font-semibold hover:bg-[#D1D5DB]"
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          Preview
+        </Button>
+        {form.slug && (
           <Button
             type="button"
-            variant="outline"
-            onClick={() => setShowPreview(true)}
-            disabled={isSubmitting}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            Preview
-          </Button>
-          {form.slug && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => window.open(`/events/${form.slug}`, "_blank")}
-              disabled={isSubmitting}
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Public Page
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => submit("save")}
-            isLoading={isSubmitting}
-            disabled={isSubmitting || isAutosaving}
-          >
-            Save changes
-          </Button>
-        </div>
-      ) : (
-        <div className="flex justify-end gap-4 border-t border-black/10 pt-6">
-          <Button
-            type="button"
-            onClick={() => setShowPreview(true)}
+            onClick={() => window.open(`/events/${form.slug}`, "_blank")}
             disabled={isSubmitting}
             className="h-[50px] rounded-[10px] bg-[#E5E7EB] px-4 text-[#4a5565] text-lg font-semibold hover:bg-[#D1D5DB]"
           >
-            <Eye className="mr-2 h-4 w-4" />
-            Preview
+            <ExternalLink className="mr-2 h-4 w-4" />
+            View Public Page
           </Button>
-          {mode === "edit" && form.slug && (
-            <Button
-              type="button"
-              onClick={() => window.open(`/events/${form.slug}`, "_blank")}
-              disabled={isSubmitting}
-              className="h-[50px] rounded-[10px] bg-[#E5E7EB] px-4 text-[#4a5565] text-lg font-semibold hover:bg-[#D1D5DB]"
-            >
-              <ExternalLink className="mr-2 h-4 w-4" />
-              View Public Page
-            </Button>
-          )}
-          <Button
-            type="button"
-            onClick={onCancel}
-            disabled={isSubmitting}
-            className="h-[50px] w-[120px] rounded-[10px] bg-[#E5E7EB] text-[#4a5565] text-lg font-semibold hover:bg-[#D1D5DB]"
-          >
-            Cancel
-          </Button>
+        )}
+        {isPublishedEvent ? (
           <Button
             onClick={() => submit("save")}
             isLoading={isSubmitting}
             disabled={isSubmitting || isAutosaving}
-            className="h-[50px] w-[152px] rounded-[10px] bg-[#e5e7eb] text-[#4a5565] text-lg font-semibold hover:bg-[#d1d5dc]"
+            className="h-[50px] w-[152px] rounded-[10px] bg-[#5c8bd9] text-white text-lg font-semibold shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] hover:bg-[#4a7ac8]"
           >
-            Save as Draft
+            Save changes
           </Button>
-          <Button
-            onClick={() => submit("publish")}
-            isLoading={isSubmitting}
-            disabled={isSubmitting || isAutosaving}
-            className="h-[50px] w-[190px] rounded-[10px] bg-[#5c8bd9] text-white text-lg font-semibold shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] hover:bg-[#4a7ac8]"
-          >
-            Publish Event
-          </Button>
-        </div>
-      )}
+        ) : (
+          <>
+            <Button
+              onClick={() => submit("save")}
+              isLoading={isSubmitting}
+              disabled={isSubmitting || isAutosaving}
+              className="h-[50px] w-[152px] rounded-[10px] bg-[#e5e7eb] text-[#4a5565] text-lg font-semibold hover:bg-[#d1d5dc]"
+            >
+              Save as Draft
+            </Button>
+            <Button
+              onClick={() => submit("publish")}
+              isLoading={isSubmitting}
+              disabled={isSubmitting || isAutosaving}
+              className="h-[50px] w-[190px] rounded-[10px] bg-[#5c8bd9] text-white text-lg font-semibold shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] hover:bg-[#4a7ac8]"
+            >
+              Publish Event
+            </Button>
+          </>
+        )}
+      </div>
 
       {cropSession ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">

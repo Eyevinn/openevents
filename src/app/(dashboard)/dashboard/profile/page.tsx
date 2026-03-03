@@ -163,7 +163,7 @@ export default async function OrganizerProfilePage() {
                     <EventStatusBadge status={event.status} />
                     <Link
                       href={`/dashboard/events/${event.id}`}
-                      className="rounded-md border border-gray-300 px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                      className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white h-9 px-3 text-sm font-medium hover:bg-gray-50"
                     >
                       View
                     </Link>
