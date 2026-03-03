@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CalendarPlus, ExternalLink, CreditCard } from 'lucide-react'
+import { ExternalLink, CreditCard, Clock, CheckCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils'
 import { DownloadTicketsButton } from '@/components/tickets/DownloadTicketsButton'
@@ -69,6 +69,8 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
       : [order.event.venue, order.event.city, order.event.country].filter(Boolean).join(', ')
 
   const isPendingInvoice = order.status === 'PENDING_INVOICE'
+  const isPaid = order.status === 'PAID'
+  const canDownloadTickets = isPaid && order.tickets.length > 0
   const statusDisplay = getStatusDisplay(order.status)
 
   const calendarStart = new Date(order.event.startDate).toISOString().replace(/[-:]|\.\d{3}/g, '')
@@ -121,7 +123,7 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
                 endDate: order.event.endDate,
               }}
             />
-            <DownloadTicketsButton />
+            {canDownloadTickets && <DownloadTicketsButton />}
           </div>
         </CardContent>
       </Card>
@@ -131,13 +133,42 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-yellow-800">
               <CreditCard className="h-5 w-5" />
-              Payment Instructions
+              Payment Required
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
-            <p className="text-yellow-800">
-              Your order has been received and is awaiting payment. Please complete your payment to receive your tickets.
-            </p>
+            {/* Status Progression */}
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-yellow-200 bg-white p-3">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-xs font-medium text-green-700">Order Received</span>
+              </div>
+              <div className="hidden h-0.5 w-4 bg-yellow-300 sm:block" />
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-yellow-600" />
+                <span className="text-xs font-medium text-yellow-700">Awaiting Payment</span>
+              </div>
+              <div className="hidden h-0.5 w-4 bg-gray-200 sm:block" />
+              <div className="flex items-center gap-1.5 opacity-50">
+                <CheckCircle className="h-4 w-4 text-gray-400" />
+                <span className="text-xs font-medium text-gray-400">Tickets Issued</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-yellow-800">
+              <p>
+                Your order has been received. Please complete payment to receive your tickets.
+              </p>
+              <p className="font-medium">
+                What happens next:
+              </p>
+              <ol className="ml-4 list-decimal space-y-1 text-sm">
+                <li>Pay the invoice using the details below</li>
+                <li>The organizer confirms your payment</li>
+                <li>Your tickets will be issued and available for download</li>
+              </ol>
+            </div>
+
             <div className="rounded-md border border-yellow-200 bg-white p-4">
               <h4 className="mb-2 font-semibold text-gray-900">Payment Details</h4>
               <dl className="space-y-1 text-gray-700">
@@ -153,7 +184,6 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
             </div>
             <p className="text-xs text-yellow-700">
               Please include your order number ({order.orderNumber}) as the payment reference.
-              Your tickets will be issued once payment is confirmed by the event organizer.
             </p>
           </CardContent>
         </Card>
