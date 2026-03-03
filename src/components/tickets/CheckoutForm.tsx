@@ -862,7 +862,7 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
             <CardHeader>
               <CardTitle className="text-lg">Payment Method</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
                 <input
                   type="radio"
@@ -874,21 +874,34 @@ export function CheckoutForm({ event }: CheckoutFormProps) {
                 />
                 PayPal
               </label>
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="radio"
-                  name="payment-method"
-                  value="INVOICE"
-                  checked={paymentMethod === 'INVOICE'}
-                  onChange={() => setPaymentMethod('INVOICE')}
-                />
-                Invoice
-              </label>
+              {/* Only show invoice option when an invoice-enabling discount code is applied */}
+              {discount?.discountType === 'INVOICE' && (
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    name="payment-method"
+                    value="INVOICE"
+                    checked={paymentMethod === 'INVOICE'}
+                    onChange={() => setPaymentMethod('INVOICE')}
+                  />
+                  Invoice
+                </label>
+              )}
               {discount?.discountType === 'INVOICE' && (
                 <p className="text-xs text-gray-500">Invoice code applied. Checkout will create a pending invoice order.</p>
               )}
               {discount?.discountType === 'FREE_TICKET' && (
                 <p className="text-xs text-green-600">Free ticket code applied. No payment required.</p>
+              )}
+              {/* Informational text about invoice payment */}
+              {discount?.discountType !== 'INVOICE' && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Want to pay by invoice? Contact{' '}
+                  <a href="mailto:info@eyevinn.se" className="text-blue-600 hover:underline">
+                    info@eyevinn.se
+                  </a>{' '}
+                  to request invoice payment.
+                </p>
               )}
             </CardContent>
           </Card>
