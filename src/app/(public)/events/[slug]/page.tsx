@@ -205,18 +205,6 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
                 </a>
               )}
             </div>
-            {event.website && (
-              <a
-                href={event.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[#5c8bd9] transition hover:text-[#4a7ac8]"
-                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
-              >
-                <ExternalLink className="h-5 w-5" />
-                <span className="text-[16px] underline">Event Website</span>
-              </a>
-            )}
             <div className="flex flex-col gap-[12px]">
               {event.locationType !== 'ONLINE' ? (
                 <div className="flex items-start gap-[16px]">
@@ -372,6 +360,21 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
           ) : null}
         </div>
       </section>
+
+      {event.website && (
+        <section className="border-b border-gray-300 pb-8">
+          <a
+            href={event.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-[#5c8bd9] transition hover:text-[#4a7ac8]"
+            style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+          >
+            <ExternalLink className="h-5 w-5" />
+            <span className="text-[18px] underline">Event Website</span>
+          </a>
+        </section>
+      )}
 
       {speakers.length > 0 ? (
         <section className="border-b border-[#bfbfbf] pb-8">
