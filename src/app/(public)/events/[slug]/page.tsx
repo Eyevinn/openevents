@@ -371,7 +371,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
             style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
           >
             <ExternalLink className="h-5 w-5" />
-            <span className="text-[18px] underline">Event Website</span>
+            <span className="text-[18px] underline">Read more about {event.title} on the event website</span>
           </a>
         </section>
       )}
