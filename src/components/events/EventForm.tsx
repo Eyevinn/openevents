@@ -105,6 +105,7 @@ type InitialSpeaker = {
   title: string;
   organization: string;
   photo: string;
+  link: string;
 };
 
 type EventFormProps = {
@@ -146,6 +147,7 @@ type SpeakerDraft = {
   name: string;
   title: string;
   organization: string;
+  link: string;
   originalFile: File | null;
   croppedFile: File | null;
   previewUrl: string | null;
@@ -235,6 +237,7 @@ function buildEventPayload(
     organizerNames: validSpeakerDrafts.map((draft) => draft.title),
     sponsorNames: validSpeakerDrafts.map((draft) => draft.organization),
     speakerPhotos: validSpeakerDrafts.map((draft) => draft.publicUrl),
+    speakerLinks: validSpeakerDrafts.map((draft) => draft.link?.trim() || ""),
     categoryIds: form.categoryIds,
     ticketTypes: undefined,
     ticketTypeId: undefined,
@@ -808,6 +811,7 @@ export function EventForm({
         name: speaker.name,
         title: speaker.title,
         organization: speaker.organization,
+        link: speaker.link || "",
         originalFile: null,
         croppedFile: null,
         previewUrl: null,
@@ -2746,6 +2750,7 @@ export function EventForm({
         name: "",
         title: "",
         organization: "",
+        link: "",
         originalFile: null,
         croppedFile: null,
         previewUrl: null,
@@ -2769,7 +2774,7 @@ export function EventForm({
 
   function updateSpeakerDraft(
     key: string,
-    field: "name" | "title" | "organization",
+    field: "name" | "title" | "organization" | "link",
     value: string,
   ) {
     setSpeakerDrafts((current) =>
@@ -4814,7 +4819,7 @@ export function EventForm({
                   </div>
 
                   {/* Fields */}
-                  <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="flex-1 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <Label>Name</Label>
                       <Input
@@ -4844,6 +4849,20 @@ export function EventForm({
                           updateSpeakerDraft(
                             draft.key,
                             "organization",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Website/Link</Label>
+                      <Input
+                        value={draft.link}
+                        placeholder="https://example.com"
+                        onChange={(e) =>
+                          updateSpeakerDraft(
+                            draft.key,
+                            "link",
                             e.target.value,
                           )
                         }

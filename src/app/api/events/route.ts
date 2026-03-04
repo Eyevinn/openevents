@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       organizerNames,
       sponsorNames,
       speakerPhotos,
+      speakerLinks,
       videoUrl,
       ...input
     } = parsed.data
@@ -71,7 +72,8 @@ export async function POST(request: NextRequest) {
       normalizedSpeakerNames,
       normalizedOrganizerNames,
       normalizedSponsorNames,
-      speakerPhotos
+      speakerPhotos,
+      speakerLinks
     )
 
     if (categoryIds.length > 0) {

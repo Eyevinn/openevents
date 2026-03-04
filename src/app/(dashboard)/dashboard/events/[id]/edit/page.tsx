@@ -126,6 +126,10 @@ export default async function EditEventPage({ params }: PageProps) {
         ? String(speaker.socialLinks.organization || '')
         : '',
     photo: speaker.photo || '',
+    link:
+      isRecord(speaker.socialLinks) && speaker.socialLinks.__kind === 'EVENT_PEOPLE'
+        ? String(speaker.socialLinks.link || '')
+        : '',
   }))
 
   return (
