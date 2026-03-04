@@ -16,6 +16,7 @@ const eventSchemaBase = z.object({
   country: z.string().optional(),
   postalCode: z.string().optional(),
   onlineUrl: z.string().url().optional().nullable(),
+  website: z.string().url().optional().nullable(),
   coverImage: z.string().url().optional().nullable(),
   bottomImage: z.string().url().optional().nullable(),
   videoUrl: z.string().url().optional().nullable(),
