@@ -23,6 +23,13 @@ interface TicketSelectorProps {
   onQuantityChange: (ticketTypeId: string, quantity: number) => void
 }
 
+const getTicketRemainingText = (remaining: number | null, isAvailable: boolean): string => {
+  if (remaining === 0 || !isAvailable) return 'Sold out'
+  if (remaining === null) return 'Tickets available'
+  if (remaining < 20) return 'Few tickets left!'
+  return 'Tickets available'
+}
+
 export function TicketSelector({
   ticketTypes,
   quantities,
@@ -46,14 +53,17 @@ export function TicketSelector({
                 {ticketType.description && (
                   <p className="text-sm text-gray-600">{ticketType.description}</p>
                 )}
-                <p className="text-sm text-gray-500">
-                  {ticketType.remaining === null
-                    ? 'Unlimited capacity'
-                    : `${ticketType.remaining} remaining (${ticketType.sold} sold)`}
+                <p
+                  className={`text-sm font-medium ${
+                    ticketType.remaining !== null &&
+                    ticketType.remaining > 0 &&
+                    ticketType.remaining < 20
+                      ? 'text-orange-600'
+                      : 'text-gray-500'
+                  }`}
+                >
+                  {getTicketRemainingText(ticketType.remaining, ticketType.isAvailable)}
                 </p>
-                {!ticketType.isAvailable && (
-                  <p className="text-sm font-medium text-red-600">Sold out or not currently on sale</p>
-                )}
               </div>
 
               <div className="flex items-center gap-3">
