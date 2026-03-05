@@ -575,6 +575,22 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
     })
   }
 
+  function fillAttendeeFromBuyer(ticketTypeId: string, index: number) {
+    setAttendeesByType((current) => {
+      const slots = current[ticketTypeId] ? [...current[ticketTypeId]] : []
+      if (!slots[index]) return current
+      slots[index] = {
+        ...slots[index],
+        firstName: buyer.firstName,
+        lastName: buyer.lastName,
+        email: buyer.email,
+        title: buyer.title,
+        organization: buyer.organization,
+      }
+      return { ...current, [ticketTypeId]: slots }
+    })
+  }
+
   async function handleSubmit(eventForm: FormEvent<HTMLFormElement>) {
     eventForm.preventDefault()
 
@@ -886,7 +902,18 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
                           key={`${item.ticketTypeId}-${i}`}
                           className="rounded-lg border border-gray-200 p-4"
                         >
-                          <p className="mb-3 text-sm font-medium text-gray-700">{label}</p>
+                          <div className="mb-3 flex items-center justify-between gap-2">
+                            <p className="text-sm font-medium text-gray-700">{label}</p>
+                            {buyer.firstName && buyer.lastName && buyer.email && (
+                              <button
+                                type="button"
+                                onClick={() => fillAttendeeFromBuyer(item.ticketTypeId, i)}
+                                className="text-xs text-blue-600 hover:text-blue-800 hover:underline shrink-0"
+                              >
+                                Fill from my details
+                              </button>
+                            )}
+                          </div>
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div className="space-y-1">
                               <Label
