@@ -153,7 +153,9 @@ export function RegisterForm() {
         {/* First / Last name */}
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
-            <label className="text-base font-semibold text-black">First name</label>
+            <label className="text-base font-semibold text-black">
+              First name <span className="text-red-500">*</span>
+            </label>
             <input
               placeholder="John"
               autoComplete="given-name"
@@ -166,7 +168,9 @@ export function RegisterForm() {
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-base font-semibold text-black">Last name</label>
+            <label className="text-base font-semibold text-black">
+              Last name <span className="text-red-500">*</span>
+            </label>
             <input
               placeholder="Doe"
               autoComplete="family-name"
@@ -182,7 +186,9 @@ export function RegisterForm() {
 
         {/* Email */}
         <div className="flex flex-col gap-2">
-          <label className="text-base font-semibold text-black">Email address</label>
+          <label className="text-base font-semibold text-black">
+            Email address <span className="text-red-500">*</span>
+          </label>
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#828283] pointer-events-none" />
             <input
@@ -201,7 +207,9 @@ export function RegisterForm() {
 
         {/* Password */}
         <div className="flex flex-col gap-2">
-          <label className="text-base font-semibold text-black">Password</label>
+          <label className="text-base font-semibold text-black">
+            Password <span className="text-red-500">*</span>
+          </label>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#828283] pointer-events-none" />
             <input
@@ -233,7 +241,9 @@ export function RegisterForm() {
 
         {/* Confirm password */}
         <div className="flex flex-col gap-2">
-          <label className="text-base font-semibold text-black">Confirm password</label>
+          <label className="text-base font-semibold text-black">
+            Confirm password <span className="text-red-500">*</span>
+          </label>
           <div className="relative">
             <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#828283] pointer-events-none" />
             <input
@@ -268,6 +278,7 @@ export function RegisterForm() {
             className="h-[18px] w-[18px] cursor-pointer rounded accent-[#5c8bd9]"
           />
           <span className="text-sm font-medium text-[#4a5565]">
+            <span className="text-red-500">*</span>{' '}
             I agree to the{' '}
             <Link href="/terms" className="text-[#5c8bd9] hover:underline">
               Terms and Conditions
