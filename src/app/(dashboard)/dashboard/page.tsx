@@ -8,6 +8,7 @@ import { RecentOrders } from '@/components/dashboard/RecentOrders'
 import { SalesChart } from '@/components/dashboard/SalesChart'
 import { SalesTrendChart } from '@/components/dashboard/SalesTrendChart'
 import { getDashboardAnalytics } from '@/lib/analytics/dashboard-analytics'
+import { WorkspacePageHeader } from '@/components/layout/WorkspaceShell'
 
 const revenueStatuses: OrderStatus[] = ['PAID']
 
@@ -94,16 +95,14 @@ export default async function DashboardHomePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {`Welcome, ${welcomeName}`}
-          </h1>
-          <p className="text-gray-600">
-            {isSuperAdmin ? 'Platform-wide overview of events, orders, and revenue.' : 'Overview of your events, orders, and revenue.'}
-          </p>
-        </div>
-      </div>
+      <WorkspacePageHeader
+        title={`Welcome, ${welcomeName}`}
+        description={
+          isSuperAdmin
+            ? 'Platform-wide overview of events, orders, and revenue.'
+            : 'Overview of your events, orders, and revenue.'
+        }
+      />
 
       {stats.totalEvents === 0 && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 p-6">

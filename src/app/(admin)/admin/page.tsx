@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { EventStatus, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { AdminEventsTable } from '@/components/admin/AdminEventsTable'
+import { WorkspacePageHeader, WorkspaceStatsGrid } from '@/components/layout/WorkspaceShell'
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -96,39 +97,32 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Overview</h1>
-        <p className="mt-1 text-gray-600">Platform statistics and all events</p>
-      </div>
+      <WorkspacePageHeader
+        title="Admin Overview"
+        description="Platform-wide statistics and centralized event management."
+        actions={(
+          <Link
+            href="/admin/users"
+            className="inline-flex rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            Manage Users
+          </Link>
+        )}
+      />
 
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <p className="text-sm font-medium text-gray-500">Total Users</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{totalUsers}</p>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <p className="text-sm font-medium text-gray-500">Organizers</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{organizerCount}</p>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-6">
-          <p className="text-sm font-medium text-gray-500">Total Events</p>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{totalEvents}</p>
-        </div>
-      </div>
+      <WorkspaceStatsGrid
+        columns={3}
+        items={[
+          { label: 'Total Users', value: totalUsers },
+          { label: 'Organizers', value: organizerCount },
+          { label: 'Total Events', value: totalEvents },
+        ]}
+      />
 
       {/* Events Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">All Events</h2>
-          <Link
-            href="/admin/users"
-            className="text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            Manage Users
-          </Link>
         </div>
 
         {/* Filters */}
@@ -164,7 +158,7 @@ export default async function AdminOverviewPage({ searchParams }: PageProps) {
           <div className="flex items-end">
             <button
               type="submit"
-              className="h-10 rounded-md bg-blue-600 px-4 text-sm font-medium text-white"
+              className="h-10 rounded-md bg-[#5C8BD9] px-4 text-sm font-medium text-white hover:bg-[#4a7ac8]"
             >
               Apply
             </button>

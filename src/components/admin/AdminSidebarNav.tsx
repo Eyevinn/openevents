@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
-  id: 'overview' | 'users'
+  id: 'dashboard' | 'users'
   href: string
   label: string
 }
@@ -14,7 +14,7 @@ export function AdminSidebarNav() {
   const pathname = usePathname()
 
   const navItems: NavItem[] = [
-    { id: 'overview', href: '/admin', label: 'Overview' },
+    { id: 'dashboard', href: '/admin', label: 'Dashboard' },
     { id: 'users', href: '/admin/users', label: 'Users' },
   ]
 
@@ -22,7 +22,7 @@ export function AdminSidebarNav() {
     <nav className="mt-3 space-y-1 text-sm">
       {navItems.map((item) => {
         const active =
-          item.id === 'overview'
+          item.id === 'dashboard'
             ? pathname === '/admin'
             : pathname.startsWith(item.href)
 

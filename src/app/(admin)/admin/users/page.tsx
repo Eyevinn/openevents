@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { getCurrentUser, hasRole } from '@/lib/auth'
 import { UsersTable } from '@/components/admin/UsersTable'
 import { Role } from '@prisma/client'
+import { WorkspacePageHeader } from '@/components/layout/WorkspaceShell'
 
 type SearchParams = Promise<{
   role?: string
@@ -98,10 +99,10 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="mt-1 text-gray-600">Manage user roles and permissions</p>
-      </div>
+      <WorkspacePageHeader
+        title="User Management"
+        description="Manage platform user roles and organizer permissions."
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 rounded-xl border border-gray-200 bg-white p-4">
@@ -112,7 +113,7 @@ export default async function AdminUsersPage({
               href={buildUrl({ role: 'all', page: '1' })}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 roleFilter === 'all'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#5C8BD9] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -122,7 +123,7 @@ export default async function AdminUsersPage({
               href={buildUrl({ role: 'ORGANIZER', page: '1' })}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 roleFilter === 'ORGANIZER'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#5C8BD9] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -132,7 +133,7 @@ export default async function AdminUsersPage({
               href={buildUrl({ role: 'ATTENDEE_ONLY', page: '1' })}
               className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                 roleFilter === 'ATTENDEE_ONLY'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[#5C8BD9] text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
@@ -148,7 +149,7 @@ export default async function AdminUsersPage({
             name="search"
             placeholder="Search by name or email..."
             defaultValue={searchQuery}
-            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
           />
           <button
             type="submit"
