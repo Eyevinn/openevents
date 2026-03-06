@@ -6,7 +6,7 @@ import { requireRole } from '@/lib/auth'
 import { sendEventCancellationEmail } from '@/lib/email'
 import { lockTicketTypes } from '@/lib/orders'
 import { getDiscountUsageUnitsFromItems, releaseDiscountCodeUsage } from '@/lib/orders/discountUsage'
-import { isPayPalConfigured, processRefund } from '@/lib/payments'
+import { isPaymentProviderConfigured, processRefund } from '@/lib/payments'
 import { formatDateTime } from '@/lib/utils'
 
 const cancelBodySchema = z.object({
@@ -153,13 +153,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const soldReleases = new Map<string, number>()
         const paidOrderIds: string[] = []
         const pendingOrderIds: string[] = []
-        const paypalPaidOrderIds: string[] = []
+        const paidGatewayOrderIds: string[] = []
 
         for (const order of orders) {
           if (order.status === 'PAID') {
             paidOrderIds.push(order.id)
             if (order.paymentMethod === 'PAYPAL') {
-              paypalPaidOrderIds.push(order.id)
+              paidGatewayOrderIds.push(order.id)
             }
           } else {
             pendingOrderIds.push(order.id)
@@ -237,11 +237,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
           })
         }
 
-        if (paypalPaidOrderIds.length > 0) {
+        if (paidGatewayOrderIds.length > 0) {
           await tx.order.updateMany({
             where: {
               id: {
-                in: paypalPaidOrderIds,
+                in: paidGatewayOrderIds,
               },
             },
             data: {
@@ -278,13 +278,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     )
 
-    const payPalConfigured = isPayPalConfigured()
-    const refundablePayPalOrders = affectedOrders.filter(
+    const paymentProviderConfigured = isPaymentProviderConfigured()
+    const refundableGatewayOrders = affectedOrders.filter(
       (order) => order.status === 'PAID' && order.paymentMethod === 'PAYPAL'
     )
 
     const refundResults = await Promise.all(
-      refundablePayPalOrders.map(async (order) => {
+      refundableGatewayOrders.map(async (order) => {
         if (!order.paymentId) {
           await prisma.order.update({
             where: { id: order.id },
@@ -293,7 +293,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
               refundReason,
               refundNotes: appendNote(
                 order.refundNotes,
-                `Event cancellation on ${cancelledAt.toISOString()}: missing PayPal capture ID, manual refund required.`
+                `Event cancellation on ${cancelledAt.toISOString()}: missing payment reference, manual refund required.`
               ),
             },
           })
@@ -301,7 +301,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           return { status: 'failed' as const }
         }
 
-        if (!payPalConfigured) {
+        if (!paymentProviderConfigured) {
           await prisma.order.update({
             where: { id: order.id },
             data: {
@@ -309,7 +309,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
               refundReason,
               refundNotes: appendNote(
                 order.refundNotes,
-                `Event cancellation on ${cancelledAt.toISOString()}: PayPal is not configured, manual refund required.`
+                `Event cancellation on ${cancelledAt.toISOString()}: Stripe is not configured, manual refund required.`
               ),
             },
           })
@@ -335,7 +335,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 refundedAt: new Date(),
                 refundNotes: appendNote(
                   order.refundNotes,
-                  `Event cancellation refund processed via PayPal. Refund ID: ${refund.refundId}.`
+                  `Event cancellation refund processed via Stripe. Refund ID: ${refund.refundId}.`
                 ),
               },
             })
@@ -350,7 +350,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
               refundReason,
               refundNotes: appendNote(
                 order.refundNotes,
-                `Event cancellation refund initiated via PayPal. Refund ID: ${refund.refundId}.`
+                `Event cancellation refund initiated via Stripe. Refund ID: ${refund.refundId}.`
               ),
             },
           })
@@ -358,8 +358,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           return { status: 'pending' as const }
         } catch (refundError) {
           const reason =
-            refundError instanceof Error ? refundError.message : 'Unknown PayPal refund error'
-          console.error(`PayPal refund initiation failed for order ${order.orderNumber}:`, refundError)
+            refundError instanceof Error ? refundError.message : 'Unknown Stripe refund error'
+          console.error(`Stripe refund initiation failed for order ${order.orderNumber}:`, refundError)
 
           await prisma.order.update({
             where: { id: order.id },
@@ -396,8 +396,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ordersCancelled: affectedOrders.length,
         pendingOrInvoiceOrdersCancelled: pendingCancelledCount,
         paidOrdersCancelled: paidCancelledCount,
-        paypalRefunds: {
-          attempted: refundablePayPalOrders.length,
+        paymentRefunds: {
+          attempted: refundableGatewayOrders.length,
           completed: refundCompletedCount,
           pending: refundPendingCount,
           failed: refundFailedCount,

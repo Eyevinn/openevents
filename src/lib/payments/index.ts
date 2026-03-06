@@ -1,19 +1,18 @@
 /**
  * Payment Service
  *
- * This module provides payment processing using PayPal REST API.
- * Falls back to stub mode if PayPal credentials are not configured.
+ * This module provides payment processing using Stripe Checkout.
+ * Falls back to stub mode if Stripe credentials are not configured.
  */
 
 import {
-  createPayPalOrder,
-  capturePayPalOrder,
-  refundPayPalPayment,
-  getPayPalOrder,
-  isPayPalConfigured,
-  isPayPalSandbox,
-  type CreatePayPalOrderOptions,
-} from './paypal'
+  createStripeCheckoutSession,
+  captureStripeCheckoutSession,
+  refundStripePayment,
+  getStripePaymentStatus,
+  isStripeConfigured,
+  isStripeTestMode,
+} from './stripe'
 
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded'
 
@@ -22,7 +21,6 @@ export interface PaymentIntent {
   amount: number
   currency: string
   status: PaymentStatus
-  paypalOrderId?: string
   approvalUrl?: string
   createdAt: Date
 }
@@ -58,37 +56,33 @@ export interface RefundResult {
 /**
  * Create a payment intent
  *
- * For PayPal: Creates an order and returns the approval URL for redirect
+ * For Stripe: Creates a checkout session and returns the checkout URL for redirect
  * For stub mode: Returns a mock payment intent
  */
 export async function createPaymentIntent(
   options: CreatePaymentOptions
 ): Promise<PaymentIntent> {
-  // Use real PayPal if configured
-  if (isPayPalConfigured()) {
-    const paypalOptions: CreatePayPalOrderOptions = {
+  if (isStripeConfigured()) {
+    const result = await createStripeCheckoutSession({
       orderId: options.orderId,
       amount: options.amount,
       currency: options.currency,
       description: options.description,
       returnUrl: options.returnUrl,
       cancelUrl: options.cancelUrl,
-    }
-
-    const result = await createPayPalOrder(paypalOptions)
+    })
 
     return {
-      id: result.paypalOrderId,
+      id: result.checkoutSessionId,
       amount: options.amount,
       currency: options.currency,
       status: 'pending',
-      paypalOrderId: result.paypalOrderId,
-      approvalUrl: result.approvalUrl,
+      approvalUrl: result.checkoutUrl,
       createdAt: new Date(),
     }
   }
 
-  // Stub mode for development without PayPal credentials
+  // Stub mode for development without Stripe credentials
   console.log('[Payment Stub] Creating payment intent:', {
     amount: options.amount,
     currency: options.currency,
@@ -102,8 +96,6 @@ export async function createPaymentIntent(
     amount: options.amount,
     currency: options.currency,
     status: 'pending',
-    paypalOrderId: stubId,
-    // In stub mode, simulate approval URL pointing back to our capture endpoint
     approvalUrl: `${options.returnUrl}?token=${stubId}`,
     createdAt: new Date(),
   }
@@ -112,15 +104,14 @@ export async function createPaymentIntent(
 /**
  * Capture a payment after user approval
  *
- * For PayPal: Captures the approved order
+ * For Stripe Checkout: verifies completed session and returns payment intent id
  * For stub mode: Returns mock success
  */
 export async function capturePayment(
-  paypalOrderId: string
+  paymentSessionId: string
 ): Promise<CapturePaymentResult> {
-  // Use real PayPal if configured
-  if (isPayPalConfigured()) {
-    const result = await capturePayPalOrder(paypalOrderId)
+  if (isStripeConfigured()) {
+    const result = await captureStripeCheckoutSession(paymentSessionId)
 
     return {
       captureId: result.captureId,
@@ -131,10 +122,10 @@ export async function capturePayment(
   }
 
   // Stub mode
-  console.log('[Payment Stub] Capturing payment:', paypalOrderId)
+  console.log('[Payment Stub] Capturing payment:', paymentSessionId)
 
   return {
-    captureId: `cap_${paypalOrderId}`,
+    captureId: `cap_${paymentSessionId}`,
     status: 'completed',
     amount: 0,
     currency: 'SEK',
@@ -142,22 +133,18 @@ export async function capturePayment(
 }
 
 /**
- * Get payment/order status
+ * Get payment/session status
  */
 export async function getPaymentStatus(
-  paypalOrderId: string
+  paymentSessionId: string
 ): Promise<{ status: string; isApproved: boolean }> {
-  if (isPayPalConfigured()) {
-    const order = await getPayPalOrder(paypalOrderId)
-    return {
-      status: order.status,
-      isApproved: order.status === 'APPROVED' || order.status === 'COMPLETED',
-    }
+  if (isStripeConfigured()) {
+    return getStripePaymentStatus(paymentSessionId)
   }
 
   // Stub mode - always approved
   return {
-    status: 'APPROVED',
+    status: 'complete:paid',
     isApproved: true,
   }
 }
@@ -165,12 +152,12 @@ export async function getPaymentStatus(
 /**
  * Process a refund
  *
- * For PayPal: Initiates a refund via PayPal API
+ * For Stripe: Initiates a refund via Stripe API
  * For stub mode: Returns pending status
  */
 export async function processRefund(options: RefundOptions): Promise<RefundResult> {
-  if (isPayPalConfigured()) {
-    const result = await refundPayPalPayment({
+  if (isStripeConfigured()) {
+    const result = await refundStripePayment({
       captureId: options.captureId,
       amount: options.amount,
       currency: options.currency,
@@ -179,7 +166,12 @@ export async function processRefund(options: RefundOptions): Promise<RefundResul
 
     return {
       refundId: result.refundId,
-      status: result.status === 'COMPLETED' ? 'completed' : 'pending',
+      status:
+        result.status === 'COMPLETED'
+          ? 'completed'
+          : result.status === 'FAILED'
+            ? 'failed'
+            : 'pending',
     }
   }
 
@@ -195,26 +187,28 @@ export async function processRefund(options: RefundOptions): Promise<RefundResul
 /**
  * Cancel a pending payment
  */
-export async function cancelPayment(paypalOrderId: string): Promise<void> {
-  // PayPal orders that are not captured will automatically void
-  // No explicit action needed, but we log it
-  console.log('[Payment] Cancelling payment:', paypalOrderId)
+export async function cancelPayment(paymentSessionId: string): Promise<void> {
+  // Stripe checkout sessions that are not completed do not require explicit cancellation.
+  console.log('[Payment] Cancelling payment:', paymentSessionId)
 }
 
 /**
  * Check if payment is in test/sandbox mode
  */
 export function isTestMode(): boolean {
-  return isPayPalSandbox() || !isPayPalConfigured()
+  return isStripeTestMode() || !isStripeConfigured()
 }
 
 /**
- * Check if PayPal is configured
+ * Check if Stripe is configured
  */
-export { isPayPalConfigured }
+export const isPaymentProviderConfigured = isStripeConfigured
+
+// Backward-compatible export names used across existing code paths.
+export const isPayPalConfigured = isStripeConfigured
 
 /**
- * Generate URLs for PayPal redirect flow
+ * Generate URLs for redirect payment flow
  */
 export function generatePaymentUrls(
   baseUrl: string,

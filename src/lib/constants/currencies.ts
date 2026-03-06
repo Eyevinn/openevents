@@ -1,5 +1,5 @@
-// PayPal-supported currencies for checkout.
-// Source: https://developer.paypal.com/api/rest/reference/currency-codes/
+// Supported currencies for checkout.
+// Source: union of current provider capabilities and platform requirements.
 export const SUPPORTED_CURRENCIES = [
   'AUD',
   'BRL',

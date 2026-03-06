@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { OrderStatus, PaymentMethod } from '@prisma/client'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { formatPaymentMethodLabel } from '@/lib/payments/labels'
 
 type OrdersTableProps = {
   eventId: string
@@ -54,7 +55,7 @@ export function OrdersTable({ eventId, orders }: OrdersTableProps) {
                   <p className="text-xs text-gray-500">{order.buyerEmail}</p>
                 </td>
                 <td className="px-4 py-3 text-gray-700">{order.status}</td>
-                <td className="px-4 py-3 text-gray-700">{order.paymentMethod || '-'}</td>
+                <td className="px-4 py-3 text-gray-700">{formatPaymentMethodLabel(order.paymentMethod)}</td>
                 <td className="px-4 py-3 text-gray-900">{formatCurrency(order.totalAmount, order.currency)}</td>
                 <td className="px-4 py-3 text-gray-600">{formatDateTime(order.createdAt)}</td>
               </tr>

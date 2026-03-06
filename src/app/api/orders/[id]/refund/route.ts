@@ -6,7 +6,7 @@ import { prisma } from '@/lib/db'
 import { sendEmail } from '@/lib/email'
 import { canManageRefund } from '@/lib/orders/authorization'
 import { lockTicketTypes } from '@/lib/orders'
-import { processRefund, isPayPalConfigured } from '@/lib/payments'
+import { processRefund, isPaymentProviderConfigured } from '@/lib/payments'
 import { refundOrderSchema } from '@/lib/validations'
 
 interface RouteContext {
@@ -79,11 +79,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    // Only process PayPal refund if we have a capture ID and PayPal is configured
+    // Only process gateway refund if we have a capture ID and provider is configured
     let refundResult: { refundId: string; status: string } | null = null
     let refundStatus: 'PENDING' | 'PROCESSED' = 'PENDING'
 
-    if (order.paymentId && order.paymentMethod === 'PAYPAL' && isPayPalConfigured()) {
+    if (order.paymentId && order.paymentMethod === 'PAYPAL' && isPaymentProviderConfigured()) {
       try {
         refundResult = await processRefund({
           captureId: order.paymentId,
@@ -92,12 +92,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           reason: parsed.data.reason,
         })
 
-        // If PayPal refund completed immediately, mark as processed
+        // If refund completed immediately, mark as processed
         if (refundResult.status === 'completed') {
           refundStatus = 'PROCESSED'
         }
       } catch (refundError) {
-        console.error('PayPal refund failed:', refundError)
+        console.error('Stripe refund failed:', refundError)
         // Continue with pending status - can be processed manually
       }
     }
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           <p>Your refund for <strong>${order.event.title}</strong> has been processed.</p>
           <p><strong>Order:</strong> #${order.orderNumber}</p>
           <p><strong>Amount:</strong> ${order.totalAmount} ${order.currency}</p>
-          <p>The funds should appear in your PayPal account within a few business days.</p>
+          <p>The funds should appear in your original payment method within a few business days.</p>
         `,
         text: `Your refund for order #${order.orderNumber} has been processed. Amount: ${order.totalAmount} ${order.currency}`,
       })
