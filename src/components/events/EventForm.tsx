@@ -5533,8 +5533,8 @@ export function EventForm({
           city: form.city || "",
           state: form.state || "",
           country: form.country || "",
-          coverImageSrc: bannerPreviewSrc || form.coverImage || null,
-          bottomImageSrc: bottomPreviewSrc || form.bottomImage || null,
+          coverImageSrc: bannerImageSrc,
+          bottomImageSrc: bottomImageSrc,
           speakers: speakerDrafts
             .filter((speaker) => speaker.name.trim())
             .map((speaker) => ({
@@ -5542,7 +5542,10 @@ export function EventForm({
               title: speaker.title,
               organization: speaker.organization,
               previewUrl: speaker.previewUrl,
-              publicUrl: speaker.publicUrl,
+              publicUrl:
+                speaker.speakerId
+                  ? `/api/speakers/${encodeURIComponent(speaker.speakerId)}/image?v=${imageVersion}`
+                  : speaker.publicUrl,
             })),
           status: form.status,
         }}
