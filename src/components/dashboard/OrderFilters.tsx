@@ -38,9 +38,9 @@ export function OrderFilters({ initial }: OrderFiltersProps) {
         <label htmlFor="paymentMethod" className="text-xs font-medium text-gray-600">Payment</label>
         <select id="paymentMethod" name="paymentMethod" defaultValue={initial.paymentMethod || ''} className="mt-1 h-10 w-full rounded-md border border-gray-300 px-3 text-sm">
           <option value="">All</option>
-          <option value="PAYPAL">PAYPAL</option>
-          <option value="INVOICE">INVOICE</option>
-          <option value="FREE">FREE</option>
+          <option value="PAYPAL">Stripe</option>
+          <option value="INVOICE">Invoice</option>
+          <option value="FREE">Free</option>
         </select>
       </div>
       <div>

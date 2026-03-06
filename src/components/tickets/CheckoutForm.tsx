@@ -29,7 +29,7 @@ interface CheckoutFormProps {
   groupDiscounts?: GroupDiscount[]
 }
 
-// Checkout state persistence for PayPal cancel recovery
+// Checkout state persistence for payment-cancel recovery
 interface PersistedCheckoutState {
   eventId: string
   quantities: Record<string, number>
@@ -248,7 +248,6 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
   const wasSessionExpired = searchParams.get('session_expired') === 'true'
 
   const isAuthenticated = status === 'authenticated'
-  const isLoadingAuth = status === 'loading'
 
   // Track if we've restored state from localStorage (to show appropriate message)
   const [restoredFromSaved, setRestoredFromSaved] = useState(false)
@@ -314,7 +313,7 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
     }
   }, [isAuthenticated, session?.user?.email])
 
-  // Restore checkout state from localStorage when returning from PayPal cancel
+  // Restore checkout state from localStorage when returning from a cancelled payment
   useEffect(() => {
     // Only restore if coming back from cancellation and ticket types are loaded
     if (!wasCancelled || ticketLoading || ticketTypes.length === 0) return
@@ -728,9 +727,9 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
           return
         }
 
-        // Check if PayPal redirect is needed
+        // Check if redirect payment is needed
         if (payData.checkout?.type === 'redirect' && payData.checkout?.approvalUrl) {
-          // Save checkout state before redirecting to PayPal
+          // Save checkout state before redirecting to Stripe
           // This allows recovery if user cancels or session expires
           saveCheckoutState({
             eventId: event.id,
@@ -1102,7 +1101,7 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
                   onChange={() => setPaymentMethod('PAYPAL')}
                   disabled={discount?.discountType === 'INVOICE'}
                 />
-                PayPal
+                Stripe
               </label>
               {/* Only show invoice option when an invoice-enabling discount code is applied */}
               {discount?.discountType === 'INVOICE' && (
@@ -1186,13 +1185,13 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
           disabled={isSubmitting || isRedirecting || reservationExpiredInSession || reservationSecondsRemaining === 0}
         >
           {isRedirecting
-            ? 'Redirecting to PayPal...'
+            ? 'Redirecting to Stripe...'
             : reservationExpiredInSession || reservationSecondsRemaining === 0
               ? 'Refresh Page to Continue'
             : totalAmount === 0
               ? 'Complete Free Order'
               : paymentMethod === 'PAYPAL'
-                ? 'Pay with PayPal'
+                ? 'Pay with Stripe'
                 : 'Place Order'}
         </Button>
       </div>

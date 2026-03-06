@@ -10,7 +10,7 @@ import {
   createPaymentIntent,
   capturePayment,
   generatePaymentUrls,
-  isPayPalConfigured,
+  isPaymentProviderConfigured,
 } from '@/lib/payments'
 import { generateTicketCreateInput, lockTicketTypes } from '@/lib/orders'
 import { expirePendingOrderIfNeeded } from '@/lib/orders/expirePendingOrder'
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       )
     }
 
-    // Handle invoice payment method - no PayPal needed
+    // Handle invoice payment method - no external payment needed
     if (input.paymentMethod === 'INVOICE' || order.paymentMethod === 'INVOICE') {
       // Ensure the order is in PENDING_INVOICE status
       if (order.status === 'PENDING') {
@@ -159,10 +159,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
       })
     }
 
-    // Generate PayPal URLs
+    // Generate redirect URLs
     const { returnUrl, cancelUrl } = generatePaymentUrls(APP_URL, orderId)
 
-    // Create PayPal payment intent
+    // Create Stripe checkout session
     const paymentIntent = await createPaymentIntent({
       amount: Number(order.totalAmount),
       currency: order.currency,
@@ -172,24 +172,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
       cancelUrl,
     })
 
-    // Store PayPal order ID on our order for later capture
+    // Store payment session ID on our order for later capture
     await prisma.order.update({
       where: { id: orderId },
       data: {
-        paymentId: paymentIntent.paypalOrderId,
+        paymentId: paymentIntent.id,
       },
     })
 
-    // If PayPal is configured, return approval URL for redirect
-    if (isPayPalConfigured() && paymentIntent.approvalUrl) {
+    // If payment provider is configured, return approval URL for redirect
+    if (isPaymentProviderConfigured() && paymentIntent.approvalUrl) {
       return NextResponse.json({
         order: orderForResponse,
         checkout: {
           type: 'redirect',
           approvalUrl: paymentIntent.approvalUrl,
-          paypalOrderId: paymentIntent.paypalOrderId,
+          paymentSessionId: paymentIntent.id,
         },
-        message: 'Redirect to PayPal to complete payment',
+        message: 'Redirect to Stripe to complete payment',
       })
     }
 
@@ -355,7 +355,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         return NextResponse.json({ error: error.message }, { status: 409 })
       }
 
-      if (error.message === 'PayPal credentials not configured') {
+      if (error.message === 'Stripe secret key not configured') {
         return NextResponse.json(
           { error: 'Payment service not configured' },
           { status: 503 }

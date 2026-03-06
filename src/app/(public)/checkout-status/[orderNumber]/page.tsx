@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
-import { getPayPalOrder, isPayPalConfigured } from '@/lib/payments/paypal'
+import { getPaymentStatus, isPaymentProviderConfigured } from '@/lib/payments'
 
 interface CheckoutStatusPageProps {
   params: Promise<{ orderNumber: string }>
-  searchParams: Promise<{ token?: string; session_expired?: string }>
+  searchParams: Promise<{ token?: string; session_id?: string; session_expired?: string }>
 }
 
 type OrderStatusInfo = {
@@ -17,7 +17,7 @@ type OrderStatusInfo = {
   buyerEmail: string | null
 }
 
-async function getOrderStatus(orderNumber: string, paypalToken?: string): Promise<OrderStatusInfo> {
+async function getOrderStatus(orderNumber: string, paymentSessionId?: string): Promise<OrderStatusInfo> {
   // Try to find the order by order number
   const order = await prisma.order.findUnique({
     where: { orderNumber },
@@ -51,15 +51,14 @@ async function getOrderStatus(orderNumber: string, paypalToken?: string): Promis
   // Check if payment was captured
   let paymentCaptured = order.status === 'PAID'
 
-  // If we have a PayPal token and order is not yet paid, check with PayPal
-  if (!paymentCaptured && paypalToken && isPayPalConfigured()) {
+  // If we have a payment session id and order is not yet paid, check with provider
+  if (!paymentCaptured && paymentSessionId && isPaymentProviderConfigured()) {
     try {
-      const paypalOrder = await getPayPalOrder(paypalToken)
-      // COMPLETED status means payment was captured
-      paymentCaptured = paypalOrder.status === 'COMPLETED'
+      const paymentStatus = await getPaymentStatus(paymentSessionId)
+      paymentCaptured = paymentStatus.isApproved
     } catch {
-      // PayPal check failed, rely on our database status
-      console.log('[CheckoutStatus] Could not verify PayPal order status')
+      // Provider check failed, rely on our database status
+      console.log('[CheckoutStatus] Could not verify payment status')
     }
   }
 
@@ -76,9 +75,9 @@ async function getOrderStatus(orderNumber: string, paypalToken?: string): Promis
 
 export default async function CheckoutStatusPage({ params, searchParams }: CheckoutStatusPageProps) {
   const { orderNumber } = await params
-  const { token, session_expired } = await searchParams
+  const { token, session_id, session_expired } = await searchParams
 
-  const orderStatus = await getOrderStatus(orderNumber, token)
+  const orderStatus = await getOrderStatus(orderNumber, session_id || token)
 
   // Determine what message to show
   const isSessionExpired = session_expired === 'true'
@@ -151,7 +150,7 @@ export default async function CheckoutStatusPage({ params, searchParams }: Check
         {isSessionExpired && (
           <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 p-3">
             <p className="text-sm text-amber-800">
-              Your session has expired, but don't worry - your order was saved. You can view your order details using the link below.
+              Your session has expired, but don&apos;t worry - your order was saved. You can view your order details using the link below.
             </p>
           </div>
         )}

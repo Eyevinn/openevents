@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { formatPaymentMethodLabel } from '@/lib/payments/labels'
 
 export interface DashboardOrderDetails {
   id: string
@@ -36,7 +37,8 @@ export function OrderDetails({ order }: OrderDetailsProps) {
             <span className="font-medium text-gray-900">Status:</span> {order.status}
           </p>
           <p>
-            <span className="font-medium text-gray-900">Payment:</span> {order.paymentMethod || 'N/A'}
+            <span className="font-medium text-gray-900">Payment:</span>{' '}
+            {formatPaymentMethodLabel(order.paymentMethod, 'N/A')}
           </p>
           <p>
             <span className="font-medium text-gray-900">Buyer Email:</span> {order.buyerEmail}

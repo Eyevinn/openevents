@@ -20,8 +20,7 @@ const cancelOrderInputSchema = z.object({
 })
 
 /**
- * Handle PayPal cancellation redirect
- * PayPal redirects here when user cancels the payment
+ * Handle checkout cancellation redirect from payment provider.
  */
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
@@ -125,7 +124,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         }
       )
 
-      console.log('[PayPal Cancel] Order cancelled:', order.orderNumber)
+      console.log('[Payment Cancel] Order cancelled:', order.orderNumber)
     }
 
     // Redirect back to checkout page with cancellation message
@@ -133,7 +132,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true`
     )
   } catch (error) {
-    console.error('[PayPal Cancel] Failed to cancel order:', error)
+    console.error('[Payment Cancel] Failed to cancel order:', error)
     return NextResponse.redirect(`${APP_URL}?error=cancel_failed`)
   }
 }

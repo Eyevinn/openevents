@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
+import { formatPaymentMethodLabel } from '@/lib/payments/labels'
 
 type OrderDetailViewProps = {
   order: {
@@ -36,7 +37,9 @@ export function OrderDetailView({ order, refundAction, emailAction, markPaidActi
     <div className="space-y-6">
       <section className="rounded-xl border border-gray-200 bg-white p-6">
         <h1 className="text-2xl font-bold text-gray-900">Order {order.orderNumber}</h1>
-        <p className="mt-1 text-sm text-gray-600">{order.status} · {order.paymentMethod || 'No payment method'} · {formatDateTime(order.createdAt)}</p>
+        <p className="mt-1 text-sm text-gray-600">
+          {order.status} · {formatPaymentMethodLabel(order.paymentMethod, 'No payment method')} · {formatDateTime(order.createdAt)}
+        </p>
 
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>

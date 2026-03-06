@@ -9,7 +9,7 @@ An open-source event management and ticketing platform, similar to Eventbrite. B
 - **User Roles**: Attendees, Organizers, and Super Admins
 - **Authentication**: Email/password and OAuth (Google, GitHub)
 - **Media Storage**: Upload event images and videos
-- **Order Processing**: Checkout flow with PayPal stub (ready for live integration)
+- **Order Processing**: Checkout flow with Stripe integration
 - **PDF Tickets**: Downloadable/printable ticket PDFs with QR codes
 - **Organizer Dashboard**: Sales statistics, order management, and analytics
 

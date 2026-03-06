@@ -6,7 +6,7 @@ type OrderAccessInput = {
   organizerUserId: string
   requesterUserId: string
   requesterRoles: Role[]
-  // For anonymous orders, allow access if PayPal token matches
+  // For anonymous orders, allow access if payment session token matches
   isAnonymousOrderWithValidToken?: boolean
 }
 

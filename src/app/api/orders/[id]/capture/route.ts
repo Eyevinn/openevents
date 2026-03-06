@@ -17,16 +17,17 @@ interface RouteContext {
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 /**
- * Handle PayPal return after user approval
- * PayPal redirects here with ?token=PAYPAL_ORDER_ID
+ * Handle Stripe return after user approval.
+ * Stripe redirects here with ?session_id=CHECKOUT_SESSION_ID.
+ * Stub mode uses ?token=stub_payment_id.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id: orderId } = await context.params
     const { searchParams } = new URL(request.url)
-    const paypalToken = searchParams.get('token')
+    const paymentSessionId = searchParams.get('session_id') || searchParams.get('token')
 
-    if (!paypalToken) {
+    if (!paymentSessionId) {
       return NextResponse.redirect(`${APP_URL}/checkout-error?error=invalid_token`)
     }
 
@@ -72,16 +73,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Check authentication - allow both authenticated and anonymous orders
     const user = await getCurrentUser()
 
-    // For anonymous orders (userId is null), verify the PayPal token matches
+    // For anonymous orders (userId is null), verify the payment session id matches
     const isAnonymousOrder = order.userId === null
-    const isValidAnonymousAccess = isAnonymousOrder && order.paymentId === paypalToken
+    const isValidAnonymousAccess = isAnonymousOrder && order.paymentId === paymentSessionId
 
     if (!user && !isValidAnonymousAccess) {
       // Session expired for authenticated order - redirect to a helpful status page
-      // Include the PayPal token so we can check payment status
+      // Include the session id so we can check payment status
       const statusUrl = new URL(`${APP_URL}/checkout-status/${order.orderNumber}`)
       statusUrl.searchParams.set('session_expired', 'true')
-      statusUrl.searchParams.set('token', paypalToken)
+      statusUrl.searchParams.set('session_id', paymentSessionId)
       return NextResponse.redirect(statusUrl.toString())
     }
 
@@ -108,9 +109,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // Verify the PayPal token matches
-    if (order.paymentId !== paypalToken) {
-      console.error('[Capture] Token mismatch:', { expected: order.paymentId, received: paypalToken })
+    // Verify the payment session id matches
+    if (order.paymentId !== paymentSessionId) {
+      console.error('[Capture] Token mismatch:', { expected: order.paymentId, received: paymentSessionId })
       return NextResponse.redirect(`${APP_URL}/checkout-error?error=invalid_token`)
     }
 
@@ -131,14 +132,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       )
     }
 
-    const paypalOrderId = paypalToken || order.paymentId
+    const providerPaymentId = paymentSessionId || order.paymentId
 
-    if (!paypalOrderId) {
+    if (!providerPaymentId) {
       return NextResponse.redirect(`${APP_URL}/checkout-error?error=no_payment_id`)
     }
 
     // Verify the order is approved
-    const paymentStatus = await getPaymentStatus(paypalOrderId)
+    const paymentStatus = await getPaymentStatus(providerPaymentId)
 
     if (!paymentStatus.isApproved) {
       console.error('[Capture] Order not approved:', paymentStatus)
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     // Capture the payment
-    const captureResult = await capturePayment(paypalOrderId)
+    const captureResult = await capturePayment(providerPaymentId)
 
     if (captureResult.status !== 'completed') {
       console.error('[Capture] Payment capture failed:', captureResult)
