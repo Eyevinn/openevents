@@ -54,9 +54,9 @@ export default async function HomePage() {
               alt="Events built for business"
               className="h-[220px] w-full object-cover sm:h-[300px] md:h-[360px] lg:h-[420px]"
             />
-            <div className="absolute left-6 top-[12%] rounded-[20px] border border-[rgba(255,255,255,0.31)] bg-[rgba(217,217,217,0.10)] px-6 py-4 backdrop-blur-[17.5px] sm:left-8 md:left-10">
+            <div className="absolute left-4 right-4 top-[10%] rounded-[20px] border border-[rgba(255,255,255,0.31)] bg-[rgba(217,217,217,0.10)] px-4 py-3 backdrop-blur-[17.5px] sm:left-8 sm:right-auto sm:px-6 sm:py-4 md:left-10">
               <h1
-                className="text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl lg:text-[55px]"
+                className="text-2xl font-bold leading-tight text-white sm:text-4xl md:text-5xl lg:text-[55px]"
                 style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
               >
                 Events built for business
@@ -73,7 +73,7 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <h2
-              className="text-[35px] font-bold leading-normal text-black"
+              className="text-3xl font-bold leading-normal text-black sm:text-[35px]"
               style={{ fontFamily: 'var(--font-outfit)' }}
             >
               Upcoming events

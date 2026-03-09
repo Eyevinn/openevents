@@ -22,7 +22,7 @@ export function Header() {
   const canManageEvents = Boolean(isOrganizer || isSuperAdmin)
   const avatarFallback = (session?.user?.email?.[0] || 'U').toUpperCase()
   const displayName = session?.user?.name?.trim() || session?.user?.email?.split('@')[0] || 'Account'
-  const profileHref = isOrganizer ? '/dashboard/profile' : '/profile'
+  const profileHref = '/dashboard/profile'
   const avatarSrc = organizerAvatarPreview
     ? organizerAvatarPreview
     : isOrganizer
@@ -32,10 +32,16 @@ export function Header() {
 
   // Determine route context for conditional rendering
   const isOrganizerRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/admin')
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password') || pathname.startsWith('/reset-password') || pathname.startsWith('/verify-email')
+  const isAuthPage =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/verify-email') ||
+    pathname.startsWith('/choose-password')
 
-  // Show full auth UI (login/register buttons) on organizer routes and auth pages
-  // On public pages: show user menu if logged in, show subtle "Organizer Login" link if not
+  // Show full auth UI (login/register buttons) on organizer routes.
+  // On public pages and auth pages, keep header minimal for logged-out users.
   const isPublicPage = !isOrganizerRoute && !isAuthPage
 
   useEffect(() => {
@@ -80,11 +86,11 @@ export function Header() {
   return (
     <header className="bg-white border-b border-gray-200 print:hidden">
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 justify-between items-center">
+        <div className="flex h-16 items-center justify-between gap-3">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-[#5C8BD9]">OpenEvents</span>
+              <span className="text-xl font-bold text-[#5C8BD9] sm:text-2xl">OpenEvents</span>
             </Link>
           </div>
 
@@ -108,18 +114,10 @@ export function Header() {
                     Dashboard
                   </Link>
                 )}
-                {isSuperAdmin && (
-                  <Link
-                    href="/admin"
-                    className={pathname.startsWith('/admin') ? 'text-[#5C8BD9] font-semibold' : 'text-gray-600 hover:text-gray-900 font-medium'}
-                  >
-                    Admin
-                  </Link>
-                )}
                 <div ref={accountMenuRef} className="relative">
                   <button
                     type="button"
-                    className="inline-flex items-center gap-3 rounded-full border border-gray-200 bg-white px-2.5 py-1.5 transition hover:bg-gray-50"
+                    className="inline-flex max-w-[260px] items-center gap-2 rounded-full border border-gray-200 bg-white px-2 py-1.5 transition hover:bg-gray-50 lg:max-w-none lg:gap-3 lg:px-2.5"
                     onClick={() => setAccountMenuOpen((open) => !open)}
                     aria-haspopup="menu"
                     aria-expanded={accountMenuOpen}
@@ -139,9 +137,9 @@ export function Header() {
                         </div>
                       )}
                     </div>
-                    <div className="text-left leading-tight">
-                      <p className="text-sm font-medium text-gray-900">{displayName}</p>
-                      <p className="text-xs text-gray-500">{session.user.email}</p>
+                    <div className="hidden min-w-0 text-left leading-tight sm:block">
+                      <p className="truncate text-sm font-medium text-gray-900">{displayName}</p>
+                      <p className="hidden truncate text-xs text-gray-500 lg:block">{session.user.email}</p>
                     </div>
                     <ChevronDown className={`h-4 w-4 text-gray-500 transition ${accountMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -170,14 +168,7 @@ export function Header() {
                 </div>
               </>
             ) : status === 'unauthenticated' ? (
-              isPublicPage ? (
-                <Link
-                  href="/login"
-                  className="text-sm text-gray-500 hover:text-gray-700"
-                >
-                  Organizer Login
-                </Link>
-              ) : (
+              isAuthPage || isPublicPage ? null : (
                 <div className="flex items-center space-x-4">
                   <Link href="/login">
                     <Button variant="ghost" className={pathname === '/login' ? 'text-[#5C8BD9] font-semibold' : ''}>Sign In</Button>
@@ -194,7 +185,7 @@ export function Header() {
           <div className="md:hidden">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-700"
+              className="rounded-md p-1 text-gray-500 transition hover:bg-gray-50 hover:text-gray-700"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <span className="sr-only">Open menu</span>
@@ -225,7 +216,7 @@ export function Header() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 space-y-2">
+          <div className="space-y-2 border-t border-gray-100 py-4 md:hidden">
             {canManageEvents && (
               <Link
                 href="/create-event"
@@ -247,15 +238,6 @@ export function Header() {
                     Dashboard
                   </Link>
                 )}
-                {isSuperAdmin && (
-                  <Link
-                    href="/admin"
-                    className={`block px-3 py-2 rounded-md ${pathname.startsWith('/admin') ? 'text-[#5C8BD9] font-semibold' : 'text-gray-600 hover:bg-gray-50 font-medium'}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Admin
-                  </Link>
-                )}
                 <Link
                   href={profileHref}
                   className={`block px-3 py-2 rounded-md ${pathname.startsWith(profileHref) ? 'text-[#5C8BD9] font-semibold' : 'text-gray-600 hover:bg-gray-50 font-medium'}`}
@@ -274,15 +256,7 @@ export function Header() {
                 </button>
               </>
             ) : status === 'unauthenticated' ? (
-              isPublicPage ? (
-                <Link
-                  href="/login"
-                  className="block px-3 py-2 text-gray-500 hover:bg-gray-50 rounded-md"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Organizer Login
-                </Link>
-              ) : (
+              isAuthPage || isPublicPage ? null : (
                 <>
                   <Link
                     href="/login"

@@ -10,6 +10,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login')
   }
 
+  if (user.mustChangePassword) {
+    redirect('/choose-password?callbackUrl=/dashboard')
+  }
+
   if (!hasRole(user.roles, ['ORGANIZER', 'SUPER_ADMIN'])) {
     return <WorkspaceAccessDenied message="Organizer role is required to access the dashboard." />
   }

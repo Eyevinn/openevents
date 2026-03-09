@@ -146,30 +146,40 @@ export function HeroSearchBar({
   return (
     <div ref={containerRef}>
       {/* ── Pill bar ───────────────────────────────────────────────────────── */}
-      <div className="flex items-center bg-[#f2f2f4] rounded-[29px] h-[58px] px-3">
-        {/* Search text */}
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleSearch()}
-          placeholder="Search for events"
-          className="flex-1 min-w-0 bg-transparent outline-none text-[16px] text-black placeholder-[#828283] px-4 font-['Outfit',sans-serif]"
-        />
+      <div className="rounded-[20px] bg-[#f2f2f4] p-2 sm:rounded-[29px] sm:px-3 sm:py-0">
+        <div className="flex flex-wrap items-center gap-2 sm:h-[58px] sm:flex-nowrap sm:gap-0">
+          {/* Search text + icon */}
+          <div className="flex w-full min-w-0 items-center sm:flex-1">
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleSearch()}
+              placeholder="Search for events"
+              className="h-10 w-full min-w-0 bg-transparent px-3 text-[16px] text-black placeholder-[#828283] outline-none sm:h-auto sm:px-4 font-['Outfit',sans-serif]"
+            />
+            <button
+              onClick={handleSearch}
+              aria-label="Search events"
+              className="mr-0.5 ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-600 transition-colors hover:bg-black/[0.06] sm:mr-1 sm:ml-2"
+            >
+              <SearchIcon />
+            </button>
+          </div>
 
-        {/* ── Date ─────────────────────────────────────────────────────────── */}
-        <div className="relative flex items-center h-full">
-          <div className="h-6 w-px bg-[#d1d5dc] shrink-0" />
-          <button
-            onClick={() => togglePanel('date')}
-            className="flex items-center gap-1.5 px-5 py-2 text-[16px] text-black rounded-full hover:bg-black/[0.06] transition-colors whitespace-nowrap font-['Outfit',sans-serif]"
-          >
-            {dateLabel}
-            <ChevronDown />
-          </button>
+          {/* ── Date ───────────────────────────────────────────────────────── */}
+          <div className="relative flex min-w-[140px] flex-1 items-center sm:h-full sm:min-w-0 sm:flex-none">
+            <div className="hidden h-6 w-px shrink-0 bg-[#d1d5dc] sm:block" />
+            <button
+              onClick={() => togglePanel('date')}
+              className="flex w-full items-center justify-between gap-1.5 rounded-full px-4 py-2 text-[15px] text-black transition-colors hover:bg-black/[0.06] sm:w-auto sm:justify-start sm:px-5 sm:text-[16px] font-['Outfit',sans-serif]"
+            >
+              <span className="truncate">{dateLabel}</span>
+              <ChevronDown />
+            </button>
 
-          {openPanel === 'date' && (
-            <div className="absolute top-[calc(100%+12px)] left-0 z-50 bg-white rounded-2xl shadow-2xl p-5 w-[320px]">
+            {openPanel === 'date' && (
+              <div className="absolute left-0 top-[calc(100%+10px)] z-50 w-[min(20rem,calc(100vw-2rem))] rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
               {/* Step hint */}
               <p className="text-[12px] font-semibold text-[#5c8bd9] uppercase tracking-wide mb-3">
                 {!dateFrom || dateTo ? 'Select start date' : 'Select end date'}
@@ -249,23 +259,23 @@ export function HeroSearchBar({
                   Clear dates
                 </button>
               )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        {/* ── Location ─────────────────────────────────────────────────────── */}
-        <div className="relative flex items-center h-full">
-          <div className="h-6 w-px bg-[#d1d5dc] shrink-0" />
-          <button
-            onClick={() => togglePanel('location')}
-            className="flex items-center gap-1.5 px-5 py-2 text-[16px] text-black rounded-full hover:bg-black/[0.06] transition-colors whitespace-nowrap max-w-[160px] font-['Outfit',sans-serif]"
-          >
-            <span className="truncate">{location || 'Location'}</span>
-            <ChevronDown />
-          </button>
+          {/* ── Location ───────────────────────────────────────────────────── */}
+          <div className="relative flex min-w-[140px] flex-1 items-center sm:h-full sm:min-w-0 sm:flex-none">
+            <div className="hidden h-6 w-px shrink-0 bg-[#d1d5dc] sm:block" />
+            <button
+              onClick={() => togglePanel('location')}
+              className="flex w-full items-center justify-between gap-1.5 rounded-full px-4 py-2 text-[15px] text-black transition-colors hover:bg-black/[0.06] sm:max-w-[160px] sm:justify-start sm:px-5 sm:text-[16px] font-['Outfit',sans-serif]"
+            >
+              <span className="truncate">{location || 'Location'}</span>
+              <ChevronDown />
+            </button>
 
-          {openPanel === 'location' && (
-            <div className="absolute top-[calc(100%+12px)] left-0 z-50 bg-white rounded-2xl shadow-2xl p-5 w-[280px]">
+            {openPanel === 'location' && (
+              <div className="absolute left-0 top-[calc(100%+10px)] z-50 w-[min(17.5rem,calc(100vw-2rem))] rounded-2xl bg-white p-4 shadow-2xl sm:p-5">
               <label className="block text-[13px] font-semibold text-gray-500 uppercase tracking-wide mb-3">
                 Location
               </label>
@@ -288,24 +298,24 @@ export function HeroSearchBar({
                   Clear
                 </button>
               )}
-            </div>
-          )}
-        </div>
+              </div>
+            )}
+          </div>
 
-        {/* ── Category ─────────────────────────────────────────────────────── */}
-        {showCategoryDropdown && (
-          <div className="relative flex items-center h-full">
-            <div className="h-6 w-px bg-[#d1d5dc] shrink-0" />
-            <button
-              onClick={() => togglePanel('category')}
-              className="flex items-center gap-1.5 px-5 py-2 text-[16px] text-black rounded-full hover:bg-black/[0.06] transition-colors whitespace-nowrap font-['Outfit',sans-serif]"
-            >
-              {selectedCategory?.name || 'Category'}
-              <ChevronDown />
-            </button>
+          {/* ── Category ───────────────────────────────────────────────────── */}
+          {showCategoryDropdown && (
+            <div className="relative flex min-w-[140px] flex-1 items-center sm:h-full sm:min-w-0 sm:flex-none">
+              <div className="hidden h-6 w-px shrink-0 bg-[#d1d5dc] sm:block" />
+              <button
+                onClick={() => togglePanel('category')}
+                className="flex w-full items-center justify-between gap-1.5 rounded-full px-4 py-2 text-[15px] text-black transition-colors hover:bg-black/[0.06] sm:w-auto sm:justify-start sm:px-5 sm:text-[16px] font-['Outfit',sans-serif]"
+              >
+                <span className="truncate">{selectedCategory?.name || 'Category'}</span>
+                <ChevronDown />
+              </button>
 
-            {openPanel === 'category' && (
-              <div className="absolute top-[calc(100%+12px)] right-0 z-50 bg-white rounded-2xl shadow-2xl py-2 w-[220px] max-h-72 overflow-y-auto">
+              {openPanel === 'category' && (
+                <div className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-72 w-[min(13.75rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl bg-white py-2 shadow-2xl">
                 <button
                   onClick={() => { setSelectedCategory(null); setOpenPanel(null) }}
                   className={`w-full text-left px-4 py-3 text-[14px] transition-colors hover:bg-gray-50
@@ -333,19 +343,11 @@ export function HeroSearchBar({
                     {cat.name}
                   </button>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Search icon ───────────────────────────────────────────────────── */}
-        <button
-          onClick={handleSearch}
-          aria-label="Search events"
-          className="ml-2 mr-1 w-10 h-10 flex items-center justify-center rounded-full hover:bg-black/[0.06] transition-colors shrink-0 text-gray-600"
-        >
-          <SearchIcon />
-        </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Category pills ─────────────────────────────────────────────────── */}

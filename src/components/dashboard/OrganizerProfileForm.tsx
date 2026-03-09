@@ -167,7 +167,7 @@ export function OrganizerProfileForm({ initial, action }: OrganizerProfileFormPr
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
         <div>
           <Label htmlFor="website">Website</Label>
           <Input id="website" name="website" defaultValue={initial.website || ''} />
@@ -231,10 +231,11 @@ export function OrganizerProfileForm({ initial, action }: OrganizerProfileFormPr
             )}
           </div>
         </div>
-        <div>
-          <Label htmlFor="linkedin">LinkedIn</Label>
-          <Input id="linkedin" name="linkedin" defaultValue={initial.socialLinks.linkedin || ''} />
-        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="linkedin">LinkedIn</Label>
+        <Input id="linkedin" name="linkedin" defaultValue={initial.socialLinks.linkedin || ''} />
       </div>
 
       <Button type="submit" disabled={isUploadingLogo}>Save Profile</Button>

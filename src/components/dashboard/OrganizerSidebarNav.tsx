@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
-  id: 'scan' | 'overview' | 'events'
+  id: 'scan' | 'overview' | 'events' | 'adminOverview' | 'adminUsers'
   href: string
   label: string
 }
@@ -20,18 +21,28 @@ function isActive(pathname: string, item: NavItem): boolean {
       return pathname === '/dashboard'
     case 'events':
       return pathname.startsWith('/dashboard/events') && !pathname.endsWith('/scan')
+    case 'adminOverview':
+      return pathname === '/dashboard/admin'
+    case 'adminUsers':
+      return pathname.startsWith('/dashboard/admin/users')
     default:
       return false
   }
 }
 
 export function OrganizerSidebarNav() {
+  const { data: session } = useSession()
   const pathname = usePathname()
+  const isSuperAdmin = session?.user?.roles?.includes('SUPER_ADMIN')
 
   const navItems: NavItem[] = [
     { id: 'scan', href: '/dashboard/scan', label: 'Scan Tickets' },
     { id: 'overview', href: '/dashboard', label: 'Dashboard' },
     { id: 'events', href: '/dashboard/events', label: 'Manage Events' },
+  ]
+  const adminNavItems: NavItem[] = [
+    { id: 'adminOverview', href: '/dashboard/admin', label: 'Admin Overview' },
+    { id: 'adminUsers', href: '/dashboard/admin/users', label: 'User Management' },
   ]
 
   const profileSectionActive = pathname === '/dashboard/profile' || pathname.startsWith('/dashboard/settings')
@@ -59,6 +70,31 @@ export function OrganizerSidebarNav() {
           </Link>
         )
       })}
+
+      {isSuperAdmin ? (
+        <div className="pt-1">
+          <p className="px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Admin</p>
+          <div className="space-y-1">
+            {adminNavItems.map((item) => {
+              const active = isActive(pathname, item)
+
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={cn(
+                    'block rounded-md px-3 py-2 font-medium transition',
+                    active ? 'bg-[#5C8BD9] text-white' : 'text-gray-700 hover:bg-gray-50'
+                  )}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
 
       <div className="pt-1">
         <div className="flex items-center gap-1">

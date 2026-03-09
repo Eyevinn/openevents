@@ -98,14 +98,23 @@ export function LoginForm() {
         redirecting = true
         setIsRedirecting(true)
 
+        const session = await getSession()
         const callbackUrl = searchParams.get('callbackUrl')
+        if (session?.user?.mustChangePassword) {
+          const choosePasswordUrl = callbackUrl
+            ? `/choose-password?callbackUrl=${encodeURIComponent(callbackUrl)}`
+            : '/choose-password'
+          router.push(choosePasswordUrl)
+          router.refresh()
+          return
+        }
+
         if (callbackUrl) {
           router.push(callbackUrl)
           router.refresh()
           return
         }
 
-        const session = await getSession()
         const roles = session?.user?.roles || []
         const isOrganizerOrAdmin =
           roles.includes('ORGANIZER') || roles.includes('SUPER_ADMIN')
@@ -189,11 +198,11 @@ export function LoginForm() {
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-[0px_10px_30px_0px_rgba(0,0,0,0.12)] px-12 py-12">
+    <div className="rounded-2xl bg-white px-4 py-6 shadow-[0px_10px_30px_0px_rgba(0,0,0,0.12)] sm:rounded-3xl sm:px-8 sm:py-10 lg:px-12 lg:py-12">
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-black">Welcome back</h1>
-        <p className="mt-2 text-lg text-[#4a5565]">Log in to your OpenEvents account</p>
+        <h1 className="text-3xl font-bold text-black sm:text-4xl">Welcome back</h1>
+        <p className="mt-2 text-base text-[#4a5565] sm:text-lg">Log in to your OpenEvents account</p>
       </div>
 
       {/* URL-based status messages */}
@@ -218,7 +227,7 @@ export function LoginForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 sm:gap-6">
         {/* Email */}
         <div className="flex flex-col gap-2">
           <label className="text-base font-semibold text-black">Email address</label>
@@ -271,7 +280,7 @@ export function LoginForm() {
         </div>
 
         {/* Remember me + Forgot password */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
@@ -289,11 +298,32 @@ export function LoginForm() {
           </Link>
         </div>
 
-        {/* Login button */}
+        {/* Divider */}
+        <div className="border-t border-[#d1d5dc]" />
+
+        {/* Terms links */}
+        <p className="text-center text-sm text-[#4a5565]">
+          By continuing, you agree to our{' '}
+          <Link
+            href="/terms"
+            className="font-semibold text-[#5c8bd9] hover:underline"
+          >
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link
+            href="/privacy"
+            className="font-semibold text-[#5c8bd9] hover:underline"
+          >
+            Privacy Policy
+          </Link>
+        </p>
+
+        {/* Login button at the bottom */}
         <button
           type="submit"
           disabled={isLoading}
-          className="flex h-[52px] w-full items-center justify-center rounded-[10px] bg-[#5c8bd9] text-lg font-semibold text-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] transition-colors hover:bg-[#4a7ac8] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center rounded-[10px] bg-[#5c8bd9] text-base font-semibold text-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] transition-colors hover:bg-[#4a7ac8] disabled:cursor-not-allowed disabled:opacity-50 sm:h-[52px] sm:text-lg"
         >
           {isLoading ? (
             <svg
@@ -320,20 +350,6 @@ export function LoginForm() {
             'Log in'
           )}
         </button>
-
-        {/* Divider */}
-        <div className="border-t border-[#d1d5dc]" />
-
-        {/* Sign up link */}
-        <p className="text-center text-base text-[#4a5565]">
-          Don&apos;t have an account?{' '}
-          <Link
-            href="/register"
-            className="font-semibold text-[#5c8bd9] hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
       </form>
     </div>
   )

@@ -32,8 +32,8 @@ export function WorkspaceLayoutContainer({
   children,
 }: WorkspaceLayoutContainerProps) {
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-[240px_1fr]">
-      <aside className="h-fit rounded-xl border border-gray-200 bg-white p-4">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-4 py-6 sm:py-8 md:grid-cols-[220px_1fr]">
+      <aside className="h-fit rounded-xl border border-gray-200 bg-white p-4 md:sticky md:top-24">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">{sidebarTitle}</h2>
         {sidebarNav}
       </aside>

@@ -105,7 +105,7 @@ export function RegisterForm() {
 
   if (success) {
     return (
-      <div className="bg-white rounded-3xl shadow-[0px_10px_30px_0px_rgba(0,0,0,0.12)] px-12 py-12">
+      <div className="rounded-2xl bg-white px-4 py-6 shadow-[0px_10px_30px_0px_rgba(0,0,0,0.12)] sm:rounded-3xl sm:px-8 sm:py-10 lg:px-12 lg:py-12">
         <div className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
             <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,7 +119,7 @@ export function RegisterForm() {
           <p className="text-sm text-[#828283]">The link will expire in 24 hours.</p>
           <button
             onClick={() => router.push('/login')}
-            className="w-full h-[52px] rounded-[10px] border border-[#d1d5dc] bg-white text-base font-semibold text-[#4a5565] hover:bg-[#f2f2f4] transition-colors"
+            className="h-12 w-full rounded-[10px] border border-[#d1d5dc] bg-white text-base font-semibold text-[#4a5565] transition-colors hover:bg-[#f2f2f4] sm:h-[52px]"
           >
             Go to Log in
           </button>
@@ -135,11 +135,11 @@ export function RegisterForm() {
   }
 
   return (
-    <div className="bg-white rounded-3xl shadow-[0px_10px_30px_0px_rgba(0,0,0,0.12)] px-12 pt-12 pb-12">
+    <div className="rounded-2xl bg-white px-4 pb-6 pt-6 shadow-[0px_10px_30px_0px_rgba(0,0,0,0.12)] sm:rounded-3xl sm:px-8 sm:pb-10 sm:pt-10 lg:px-12 lg:pb-12 lg:pt-12">
       {/* Header */}
       <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold text-black">Create your account</h1>
-        <p className="mt-2 text-lg text-[#4a5565]">Join OpenEvents to discover and attend amazing events</p>
+        <h1 className="text-3xl font-bold text-black sm:text-4xl">Create your account</h1>
+        <p className="mt-2 text-base text-[#4a5565] sm:text-lg">Join OpenEvents to discover and attend amazing events</p>
       </div>
 
       {/* Error */}
@@ -151,7 +151,7 @@ export function RegisterForm() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
         {/* First / Last name */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <label className="text-base font-semibold text-black">
               First name <span className="text-red-500">*</span>
@@ -270,7 +270,7 @@ export function RegisterForm() {
         </div>
 
         {/* Terms */}
-        <label className="flex cursor-pointer items-center gap-2">
+        <label className="flex cursor-pointer items-start gap-2">
           <input
             type="checkbox"
             checked={acceptedTerms}
@@ -294,7 +294,7 @@ export function RegisterForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="flex h-[52px] w-full items-center justify-center rounded-[10px] bg-[#5c8bd9] text-lg font-semibold text-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] transition-colors hover:bg-[#4a7ac8] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex h-12 w-full items-center justify-center rounded-[10px] bg-[#5c8bd9] text-base font-semibold text-white shadow-[0px_4px_6px_0px_rgba(0,0,0,0.1),0px_2px_4px_0px_rgba(0,0,0,0.1)] transition-colors hover:bg-[#4a7ac8] disabled:cursor-not-allowed disabled:opacity-50 sm:h-[52px] sm:text-lg"
         >
           {isLoading ? (
             <svg

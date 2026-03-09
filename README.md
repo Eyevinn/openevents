@@ -110,7 +110,14 @@ npm run db:reset       # Reset database
 ### Running Tests
 
 ```bash
+# Run all tests
 npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run a specific test file
+npm test -- src/__tests__/lib/auth/config.test.ts
 ```
 
 ### Linting

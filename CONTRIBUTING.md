@@ -175,21 +175,54 @@ npx prisma studio
 ### Running Tests
 
 ```bash
-# Run all tests
+# Run all tests once
 npm test
 
-# Run tests in watch mode
+# Run tests in watch mode (re-runs on file changes)
 npm run test:watch
 
-# Run specific test file
-npm test -- path/to/test.ts
+# Run a specific test file
+npm test -- src/__tests__/lib/auth/config.test.ts
+
+# Run tests matching a pattern
+npm test -- --grep "authorize"
+```
+
+### Test Structure
+
+Tests are located in `src/__tests__/` and organized by module:
+
+```
+src/__tests__/
+└── lib/
+    ├── auth/
+    │   └── config.test.ts    # Auth callback tests (authorize, signIn, jwt, session)
+    ├── discountUsage.test.ts # Discount code usage tracking
+    ├── orders.test.ts        # Order processing logic
+    └── tickets.test.ts       # Ticket calculations and validations
 ```
 
 ### Writing Tests
 
-- Place tests next to the code they test (`*.test.ts`)
-- Or in `__tests__` directories
-- Use descriptive test names
+- Place tests in `src/__tests__/` mirroring the source structure
+- Use Vitest as the test runner (`describe`, `it`, `expect`)
+- Mock external dependencies (database, APIs) - no real DB calls in tests
+- Use descriptive test names that explain the expected behavior
+
+Example test structure:
+```typescript
+import { describe, it, expect, vi } from 'vitest'
+
+describe('MyFunction', () => {
+  it('returns expected value when given valid input', () => {
+    expect(myFunction('input')).toBe('expected')
+  })
+
+  it('throws error when input is invalid', () => {
+    expect(() => myFunction(null)).toThrow('Invalid input')
+  })
+})
+```
 
 ## Code Style
 
