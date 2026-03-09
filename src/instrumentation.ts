@@ -40,7 +40,7 @@ async function loadConfigFromOSC() {
   console.log(`[instrumentation] Fetching config from ${configServiceUrl}`)
 
   try {
-    const response = await fetch(`${configServiceUrl}/api/v1/config`, {
+    const response = await fetch(`${configServiceUrl}/api/v1/config?limit=100`, {
       headers: {
         'Content-Type': 'application/json',
       },
