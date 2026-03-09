@@ -144,6 +144,7 @@ export default async function EventsPage({ searchParams }: PageProps) {
 
       <HeroSearchBar
         categories={categories}
+        showCategoryDropdown={false}
         initial={{
           search,
           category,
