@@ -2163,7 +2163,7 @@ export function EventForm({
         sortOrder: index,
       };
 
-      const hasExistingTicketType = Boolean(ticketType.id) && nextPersistedIds.has(ticketType.id);
+      const hasExistingTicketType = ticketType.id != null && nextPersistedIds.has(ticketType.id);
       const endpoint = hasExistingTicketType
         ? `/api/events/${eventId}/ticket-types/${ticketType.id}`
         : `/api/events/${eventId}/ticket-types`;
