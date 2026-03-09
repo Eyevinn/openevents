@@ -234,10 +234,10 @@ export function EventPreviewModal({ open, data, onClose }: EventPreviewModalProp
                 <img
                   src={data.coverImageSrc}
                   alt={data.title}
-                  className="h-[180px] w-full object-cover sm:h-[220px]"
+                  className="aspect-video w-full object-cover"
                 />
               ) : (
-                <div className="h-[180px] bg-gradient-to-r from-slate-700 to-slate-900 sm:h-[220px]" />
+                <div className="aspect-video bg-gradient-to-r from-slate-700 to-slate-900" />
               )}
             </section>
 

@@ -2970,7 +2970,11 @@ export function EventForm({
     const draft = speakerDrafts.find((d) => d.key === key);
     if (!draft) return;
     const file = draft.originalFile || draft.croppedFile;
-    if (!file) return;
+    if (!file) {
+      // Persisted images do not have a local file to re-crop; let user pick a new one.
+      triggerSpeakerImageSelect(key);
+      return;
+    }
     openSpeakerCropper(file, key);
   }
 
