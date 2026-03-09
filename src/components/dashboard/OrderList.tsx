@@ -93,7 +93,7 @@ export function OrderList({ orders }: OrderListProps) {
             aria-label={`View tickets for ${order.event.title}`}
           >
             <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
-              <div className="h-44 w-full bg-gradient-to-r from-[#5C8BD9] to-indigo-600">
+              <div className="aspect-video w-full bg-gradient-to-r from-[#5C8BD9] to-indigo-600">
                 {order.event.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

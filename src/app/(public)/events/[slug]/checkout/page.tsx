@@ -80,7 +80,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
               {formatDateTime(event.startDate, { timeZoneName: 'short' })}
             </p>
           </div>
-          <div className="h-24 w-44 rounded-[10px] overflow-hidden flex-shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600">
+          <div className="w-44 aspect-video rounded-[10px] overflow-hidden flex-shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600">
             {event.coverImage && (
               // eslint-disable-next-line @next/next/no-img-element
               <img

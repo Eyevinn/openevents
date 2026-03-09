@@ -25,7 +25,21 @@ export async function requireEventOrganizer(eventId: string, userId: string) {
   }
 
   if (event.organizer.userId !== userId) {
-    throw new Error('Forbidden')
+    const superAdminRole = await prisma.userRole.findUnique({
+      where: {
+        userId_role: {
+          userId,
+          role: 'SUPER_ADMIN',
+        },
+      },
+      select: {
+        id: true,
+      },
+    })
+
+    if (!superAdminRole) {
+      throw new Error('Forbidden')
+    }
   }
 
   return event
