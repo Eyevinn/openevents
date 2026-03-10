@@ -12,7 +12,7 @@ export const VAT_RATES: Record<string, number> = {
   CZ: 0.21, // Czech Republic
   DE: 0.19, // Germany
   DK: 0.25, // Denmark
-  EE: 0.22, // Estonia
+  EE: 0.24, // Estonia
   ES: 0.21, // Spain
   FI: 0.255, // Finland
   FR: 0.20, // France
@@ -28,10 +28,10 @@ export const VAT_RATES: Record<string, number> = {
   NL: 0.21, // Netherlands
   PL: 0.23, // Poland
   PT: 0.23, // Portugal
-  RO: 0.19, // Romania
+  RO: 0.21, // Romania
   SE: 0.25, // Sweden
   SI: 0.22, // Slovenia
-  SK: 0.20, // Slovakia
+  SK: 0.23, // Slovakia
   // Non-EU Europe
   CH: 0.081, // Switzerland
   GB: 0.20, // United Kingdom

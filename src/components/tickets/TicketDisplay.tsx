@@ -156,6 +156,11 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
                   </p>
                 )
               })()}
+              {order.vatRate && parseFloat(order.vatRate.toString()) > 0 && (
+                <p className="text-sm text-gray-500">
+                  Incl. VAT ({Math.round(parseFloat(order.vatRate.toString()) * 100)}%): {parseFloat((order.vatAmount ?? 0).toString()).toFixed(2)} {order.currency}
+                </p>
+              )}
             </div>
           )}
 
