@@ -1,10 +1,11 @@
 # Setting Up Email for OpenEvents
 
 OpenEvents sends transactional emails for:
-- Email verification (new user registration)
-- Password reset
+- Password reset (for organizers)
 - Order confirmations
 - Event cancellation notifications
+
+> **Note:** Email verification is not currently implemented. Organizers can register and log in without verifying their email. See "Known Limitations" in the README.
 
 ## Email Modes
 
@@ -27,10 +28,10 @@ EMAIL_MODE=development
 ============================================================
 To:      user@example.com
 From:    OpenEvents <noreply@openevents.local>
-Subject: Verify your OpenEvents account
+Subject: Your OpenEvents Order Confirmation
 ------------------------------------------------------------
 🔗 Links in email:
-   http://localhost:3000/verify-email?token=abc123...
+   http://localhost:3000/orders/abc123...
 ============================================================
 ```
 
@@ -138,7 +139,6 @@ OpenEvents includes pre-built email templates for:
 
 | Function | Purpose |
 |----------|---------|
-| `sendVerificationEmail(email, token)` | Email verification link |
 | `sendPasswordResetEmail(email, token)` | Password reset link |
 | `sendOrderConfirmationEmail(email, orderDetails)` | Order confirmation |
 | `sendEventCancellationEmail(email, details)` | Event cancellation notice |
@@ -155,20 +155,20 @@ Email templates are located in `src/lib/email/index.ts`. To customize:
 
 Example customization:
 ```typescript
-export async function sendVerificationEmail(email: string, token: string) {
-  const verifyUrl = `${APP_URL}/verify-email?token=${token}`
+export async function sendPasswordResetEmail(email: string, token: string) {
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`
 
   await sendEmail({
     to: email,
-    subject: `Welcome to ${APP_NAME}!`,
+    subject: `Reset your ${APP_NAME} password`,
     html: `
       <!-- Your custom HTML template -->
       <div style="...">
-        <h1>Welcome!</h1>
-        <a href="${verifyUrl}">Verify Email</a>
+        <h1>Password Reset</h1>
+        <a href="${resetUrl}">Reset Password</a>
       </div>
     `,
-    text: `Verify your email: ${verifyUrl}`,
+    text: `Reset your password: ${resetUrl}`,
   })
 }
 ```

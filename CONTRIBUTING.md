@@ -78,7 +78,7 @@ Follow conventional commits:
 ```
 type(scope): description
 
-feat(auth): add Google OAuth login
+feat(auth): add password strength validation
 fix(tickets): prevent overselling when capacity reached
 docs(readme): update deployment instructions
 ```
@@ -120,12 +120,11 @@ src/
 The project is divided among 4 feature agents. Each agent owns a vertical slice:
 
 ### Auth Agent
-- User registration and login
-- OAuth integration (Google, GitHub)
-- Email verification
+- Organizer registration and login
 - Password reset
-- Role management
+- Role management (Organizer, Super Admin)
 - **Key files:** `src/app/(auth)/`, `src/lib/auth/`, `src/app/api/auth/`
+- **Note:** Attendees don't have accounts—they purchase tickets via guest checkout
 
 ### Events Agent
 - Event CRUD operations

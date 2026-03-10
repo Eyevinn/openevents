@@ -134,10 +134,9 @@ openevents/
 │   └── migrations/            # Database migrations
 ├── src/
 │   ├── app/                   # Next.js App Router
-│   │   ├── (auth)/            # Authentication pages
+│   │   ├── (auth)/            # Organizer authentication
 │   │   │   ├── login/
 │   │   │   ├── register/
-│   │   │   ├── verify-email/
 │   │   │   ├── forgot-password/
 │   │   │   └── reset-password/
 │   │   ├── (public)/          # Public pages
@@ -253,7 +252,7 @@ openevents/
 
 ### Key Models
 
-1. **User** - Platform users with email/password or OAuth
+1. **User** - Organizers and admins with email/password login
 2. **UserRole** - Role assignments (ATTENDEE, ORGANIZER, SUPER_ADMIN)
 3. **OrganizerProfile** - Extended profile for event organizers
 4. **Event** - Event details with location, dates, visibility
@@ -267,8 +266,8 @@ openevents/
 ### Authentication
 - Passwords hashed with bcrypt (cost factor 12)
 - JWT tokens with short expiry (30 days)
-- Email verification required for password auth
-- OAuth auto-verifies email
+- Organizer-only login (attendees use guest checkout)
+- No email verification or OAuth (see Known Limitations in README)
 
 ### Authorization
 - Role-based access control (RBAC)

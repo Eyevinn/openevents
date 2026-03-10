@@ -52,9 +52,9 @@ An open-source event management and ticketing platform built for [Streaming Tech
 - Event overview across all organizers
 
 ### Authentication
-- Email/password with verification
-- OAuth (Google, GitHub)
-- Role-based access (Attendee, Organizer, Super Admin)
+- Organizer login with email/password
+- Role-based access control (Organizer, Super Admin)
+- Guest checkout for attendees (no account required)
 - Account deletion with grace period
 
 ## Tech Stack
@@ -127,10 +127,9 @@ openevents/
 ├── prisma/                    # Database schema and migrations
 ├── src/
 │   ├── app/                   # Next.js App Router
-│   │   ├── (auth)/            # Authentication pages
+│   │   ├── (auth)/            # Organizer authentication
 │   │   │   ├── login/
 │   │   │   ├── register/
-│   │   │   ├── verify-email/
 │   │   │   ├── forgot-password/
 │   │   │   └── reset-password/
 │   │   ├── (public)/          # Public pages
