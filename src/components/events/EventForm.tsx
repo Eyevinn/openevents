@@ -3132,9 +3132,10 @@ export function EventForm({
 
       const payload = buildEventPayload(form, speakerDrafts, startUtc, endUtc);
 
-      const endpoint =
-        mode === "create" ? "/api/events" : `/api/events/${form.id}`;
-      const method = mode === "create" ? "POST" : "PATCH";
+      // Use existing form.id if available (event was already created in this session)
+      const isNewEvent = mode === "create" && !form.id;
+      const endpoint = isNewEvent ? "/api/events" : `/api/events/${form.id}`;
+      const method = isNewEvent ? "POST" : "PATCH";
 
       const eventRes = await fetch(endpoint, {
         method,
@@ -3167,7 +3168,7 @@ export function EventForm({
         savedGroupDiscounts = await syncGroupDiscounts(eventId, savedTicketTypes ?? []);
       }
 
-      if (mode === "edit" && eventId) {
+      if (eventId) {
         const savedSnapshot = buildDraftStateSnapshot(
           { ...form, id: eventId, ticketTypes: savedTicketTypes },
           speakerDrafts,
@@ -3176,6 +3177,11 @@ export function EventForm({
         );
         persistedSnapshotRef.current = savedSnapshot;
         setPersistedSnapshot(savedSnapshot);
+
+        // Update form.id so subsequent saves use PATCH instead of creating a new event
+        if (isNewEvent) {
+          setForm((current) => ({ ...current, id: eventId, slug: eventSlug }));
+        }
       }
 
       if (action === "publish" && eventId) {
