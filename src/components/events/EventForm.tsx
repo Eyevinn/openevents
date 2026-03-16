@@ -938,13 +938,12 @@ export function EventForm({
   const [openDateTimePanel, setOpenDateTimePanel] = useState<
     "startDate" | "endDate" | "startTime" | "endTime" | null
   >(null);
+  // Use stable initial value to avoid hydration mismatch, then update on client
   const [calendarNav, setCalendarNav] = useState<{
     year: number;
     month: number;
-  }>(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  });
+  }>({ year: 2024, month: 0 });
+  const calendarNavInitializedRef = useRef(false);
   const dateTimePanelRef = useRef<HTMLDivElement | null>(null);
   const [bannerPreviewSrc, setBannerPreviewSrc] = useState<string | null>(null);
   const [bottomPreviewSrc, setBottomPreviewSrc] = useState<string | null>(null);
@@ -1027,6 +1026,8 @@ export function EventForm({
   const persistedSnapshotRef = useRef(initialPersistedSnapshot);
   const initialSnapshotRef = useRef(buildSnapshot(initialFormState));
   const autosaveInFlightRef = useRef(false);
+  // Counter for generating stable speaker draft keys (avoids hydration mismatch)
+  const speakerKeyCounterRef = useRef(0);
   const historyGuardActiveRef = useRef(false);
   const bypassNavigationGuardRef = useRef(false);
   const pendingNavigationRef = useRef<(() => void) | null>(null);
@@ -1616,6 +1617,14 @@ export function EventForm({
       initialSnapshotRef.current = buildSnapshot(updatedForm);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Initialize calendar navigation to current date on client (avoids hydration mismatch)
+  useEffect(() => {
+    if (calendarNavInitializedRef.current) return;
+    calendarNavInitializedRef.current = true;
+    const now = new Date();
+    setCalendarNav({ year: now.getFullYear(), month: now.getMonth() });
   }, []);
 
   useEffect(() => {
@@ -2884,10 +2893,11 @@ export function EventForm({
   }
 
   function addSpeakerDraft() {
+    const keyId = speakerKeyCounterRef.current++;
     setSpeakerDrafts((current) => [
       ...current,
       {
-        key: `speaker-${Date.now()}-${Math.random()}`,
+        key: `speaker-new-${keyId}`,
         name: "",
         title: "",
         organization: "",
@@ -3122,9 +3132,10 @@ export function EventForm({
 
       const payload = buildEventPayload(form, speakerDrafts, startUtc, endUtc);
 
-      const endpoint =
-        mode === "create" ? "/api/events" : `/api/events/${form.id}`;
-      const method = mode === "create" ? "POST" : "PATCH";
+      // Use existing form.id if available (event was already created in this session)
+      const isNewEvent = mode === "create" && !form.id;
+      const endpoint = isNewEvent ? "/api/events" : `/api/events/${form.id}`;
+      const method = isNewEvent ? "POST" : "PATCH";
 
       const eventRes = await fetch(endpoint, {
         method,
@@ -3157,7 +3168,7 @@ export function EventForm({
         savedGroupDiscounts = await syncGroupDiscounts(eventId, savedTicketTypes ?? []);
       }
 
-      if (mode === "edit" && eventId) {
+      if (eventId) {
         const savedSnapshot = buildDraftStateSnapshot(
           { ...form, id: eventId, ticketTypes: savedTicketTypes },
           speakerDrafts,
@@ -3166,6 +3177,11 @@ export function EventForm({
         );
         persistedSnapshotRef.current = savedSnapshot;
         setPersistedSnapshot(savedSnapshot);
+
+        // Update form.id so subsequent saves use PATCH instead of creating a new event
+        if (isNewEvent) {
+          setForm((current) => ({ ...current, id: eventId, slug: eventSlug }));
+        }
       }
 
       if (action === "publish" && eventId) {
