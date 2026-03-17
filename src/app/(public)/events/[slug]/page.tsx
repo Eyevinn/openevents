@@ -326,7 +326,7 @@ export default async function EventDetailsPage({ params, searchParams }: PagePro
           <div>
             {event.descriptionHtml ? (
               <div
-                className="prose max-w-none text-[18px] leading-[29.25px] text-[#364153]"
+                className="prose max-w-none text-[18px] leading-[29.25px] text-[#364153] prose-a:text-[#5c8bd9] prose-a:hover:text-[#4a7ac8]"
                 style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(event.descriptionHtml) }}
               />
