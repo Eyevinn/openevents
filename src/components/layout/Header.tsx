@@ -96,10 +96,17 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex md:items-center md:space-x-6">
+            {/* TEMPORARY: Featured event button for launch period (remove after launch) */}
+            <Link
+              href="/events/streaming-tech-2026-5fa0c1d6"
+              className="inline-flex items-center justify-center rounded-lg bg-[#5C8BD9] px-4 py-2 text-sm font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#4a7ac8]"
+            >
+              Streaming Tech 2026
+            </Link>
             {canManageEvents && (
               <Link
                 href="/create-event"
-                className="inline-flex min-w-[132px] items-center justify-center rounded-lg bg-[#5C8BD9] px-4 py-2 text-sm font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#4a7ac8]"
+                className="inline-flex min-w-[132px] items-center justify-center rounded-lg border border-[#5C8BD9] bg-white px-4 py-2 text-sm font-semibold tracking-wide text-[#5C8BD9] shadow-sm transition hover:bg-gray-50"
               >
                 Create Event
               </Link>
@@ -218,10 +225,18 @@ export function Header() {
         {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="space-y-2 border-t border-gray-100 py-4 md:hidden">
+            {/* TEMPORARY: Featured event button for launch period (remove after launch) */}
+            <Link
+              href="/events/streaming-tech-2026-5fa0c1d6"
+              className="block rounded-lg bg-[#5C8BD9] px-3 py-2.5 text-center text-sm font-semibold tracking-wide text-white hover:bg-[#4a7ac8]"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Streaming Tech 2026
+            </Link>
             {canManageEvents && (
               <Link
                 href="/create-event"
-                className="block rounded-lg bg-[#5C8BD9] px-3 py-2.5 text-center text-sm font-semibold tracking-wide text-white hover:bg-[#4a7ac8]"
+                className="block rounded-lg border border-[#5C8BD9] bg-white px-3 py-2.5 text-center text-sm font-semibold tracking-wide text-[#5C8BD9] hover:bg-gray-50"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Create Event

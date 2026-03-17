@@ -287,12 +287,16 @@ Ticket buyers do not create accounts on the platform. This was a deliberate deci
 
 > **Note:** This section describes a temporary configuration for the platform launch. Remove this section and revert the changes when no longer needed.
 
-During the initial launch period, the homepage (`/`) and events listing page (`/events`) are temporarily redirected to `/about`. This allows sharing specific event URLs (e.g., `/events/streaming-tech-2026`) while keeping the general discovery pages hidden.
+During the initial launch period, the homepage (`/`) and events listing page (`/events`) are temporarily redirected to `/about`. This allows sharing the specific event URL (`/events/streaming-tech-2026-5fa0c1d6`) while keeping the general discovery pages hidden.
 
 ### What's Affected
 
 - **Middleware** (`src/middleware.ts`): Redirects `/` and `/events` to `/about` with a 307 (Temporary Redirect)
-- **Header** (`src/components/layout/Header.tsx`): Logo links to `/about` instead of `/`, sign-out redirects to `/about`
+- **Header** (`src/components/layout/Header.tsx`):
+  - Logo links to `/about` instead of `/`
+  - Sign-out redirects to `/about`
+  - "Streaming Tech 2026" button added linking to `/events/streaming-tech-2026-5fa0c1d6`
+  - "Create Event" button restyled as secondary (outline)
 
 ### How to Revert
 
@@ -304,6 +308,8 @@ Search for `TEMPORARY` in the codebase to find all affected locations:
 2. **Revert the Header component** (`src/components/layout/Header.tsx`):
    - Change logo `href="/about"` back to `href="/"`
    - Change both `signOut({ callbackUrl: '/about' })` calls back to `signOut({ callbackUrl: '/' })`
+   - Remove the "Streaming Tech 2026" button (desktop and mobile)
+   - Restore "Create Event" button to primary style (solid blue background)
 
 3. **Delete this README section**
 
