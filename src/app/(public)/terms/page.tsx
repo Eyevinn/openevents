@@ -270,7 +270,7 @@ export default async function TermsPage() {
   return (
     <main className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        {customContent?.html ? (
+        {customContent?.plainText?.trim() ? (
           <div>
             <h1 className="text-4xl font-bold mb-8 text-gray-900">Terms of Service</h1>
             <div
