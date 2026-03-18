@@ -266,7 +266,7 @@ export function RichTextEditor({
       <MenuBar editor={editor} />
       <EditorContent
         editor={editor}
-        className="prose prose-sm max-w-none bg-[#f9fafb] px-4 py-3 focus:outline-none [&_.ProseMirror]:min-h-[140px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[#99a1af] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]"
+        className="prose prose-sm max-w-none bg-[#f9fafb] px-4 py-3 focus:outline-none prose-a:text-[#5c8bd9] prose-a:hover:text-[#4a7ac8] [&_.ProseMirror]:min-h-[140px] [&_.ProseMirror]:outline-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-0 [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-[#99a1af] [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]"
       />
     </div>
   )
