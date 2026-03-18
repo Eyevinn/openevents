@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,7 @@ type NavItem = {
   id: 'scan' | 'overview' | 'events' | 'adminOverview' | 'adminUsers' | 'adminLegal'
   href: string
   label: string
+  badge?: 'attention'
 }
 
 function isActive(pathname: string, item: NavItem): boolean {
@@ -36,17 +37,32 @@ export function OrganizerSidebarNav() {
   const { data: session } = useSession()
   const pathname = usePathname()
   const isSuperAdmin = session?.user?.roles?.includes('SUPER_ADMIN')
+  const [legalNeedsAttention, setLegalNeedsAttention] = useState(false)
+
+  useEffect(() => {
+    if (!isSuperAdmin) return
+
+    fetch('/api/admin/legal')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data?.data) return
+        const { tos, about, privacy, contact } = data.data
+        const allDefaults = !tos?.plainText?.trim() && !about?.plainText?.trim() && !privacy?.plainText?.trim() && !contact?.email && !contact?.phone && !contact?.companyName && !contact?.address
+        setLegalNeedsAttention(allDefaults)
+      })
+      .catch(() => {})
+  }, [isSuperAdmin])
 
   const navItems: NavItem[] = [
     { id: 'scan', href: '/dashboard/scan', label: 'Scan Tickets' },
     { id: 'overview', href: '/dashboard', label: 'Dashboard' },
-    // Hide "Manage Events" for Super Admins - they use Admin Overview instead
+    // Hide "Manage Events" for Super Admins - they use Event Management instead
     ...(isSuperAdmin ? [] : [{ id: 'events' as const, href: '/dashboard/events', label: 'Manage Events' }]),
   ]
   const adminNavItems: NavItem[] = [
-    { id: 'adminOverview', href: '/dashboard/admin', label: 'Admin Overview' },
+    { id: 'adminOverview', href: '/dashboard/admin', label: 'Event Management' },
     { id: 'adminUsers', href: '/dashboard/admin/users', label: 'User Management' },
-    { id: 'adminLegal', href: '/dashboard/admin/legal', label: 'Legal & Contact' },
+    { id: 'adminLegal', href: '/dashboard/admin/legal', label: 'Legal & Contact', badge: legalNeedsAttention ? 'attention' : undefined },
   ]
 
   const profileSectionActive = pathname === '/dashboard/profile' || pathname.startsWith('/dashboard/settings')
@@ -118,12 +134,26 @@ export function OrganizerSidebarNav() {
                     key={item.id}
                     href={item.href}
                     className={cn(
-                      'block rounded-md px-3 py-2 font-medium transition',
+                      'group relative flex items-center justify-between rounded-md px-3 py-2 font-medium transition',
                       active ? 'bg-[#5C8BD9] text-white' : 'text-gray-700 hover:bg-gray-50'
                     )}
                     aria-current={active ? 'page' : undefined}
                   >
                     {item.label}
+                    {item.badge === 'attention' && (
+                      <>
+                        <span
+                          className={cn(
+                            'h-2 w-2 rounded-full',
+                            active ? 'bg-white' : 'bg-amber-500'
+                          )}
+                          aria-label="Needs attention"
+                        />
+                        <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
+                          Using default content. Customize for your organization.
+                        </span>
+                      </>
+                    )}
                   </Link>
                 )
               })}
