@@ -33,16 +33,10 @@ export default async function EditEventPage({ params }: PageProps) {
   const { id } = await params
   await requireOrganizerProfile()
 
-  const [event, categories] = await Promise.all([
-    prisma.event.findFirst({
-      where: buildEventWhereClause(null, true, { id }),
-      include: {
-        categories: {
-          select: {
-            categoryId: true,
-          },
-        },
-        agendaItems: {
+  const event = await prisma.event.findFirst({
+    where: buildEventWhereClause(null, true, { id }),
+    include: {
+      agendaItems: {
           orderBy: {
             sortOrder: 'asc',
           },
@@ -71,12 +65,7 @@ export default async function EditEventPage({ params }: PageProps) {
           orderBy: [{ minQuantity: 'asc' }, { createdAt: 'asc' }],
         },
       },
-    }),
-    prisma.category.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
-  ])
+    })
 
   if (!event) {
     notFound()
@@ -107,7 +96,6 @@ export default async function EditEventPage({ params }: PageProps) {
 
       <EventForm
         mode="edit"
-        categories={categories}
         initialSpeakers={initialSpeakers}
         initialPromoCodes={event.discountCodes.map((dc) => ({
           id: dc.id,
@@ -156,7 +144,6 @@ export default async function EditEventPage({ params }: PageProps) {
           bottomImage,
           visibility: event.visibility,
           cancellationDeadlineHours: event.cancellationDeadlineHours,
-          categoryIds: event.categories.map((item) => item.categoryId),
         }}
       />
     </div>

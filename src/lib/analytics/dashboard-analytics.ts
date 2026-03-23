@@ -10,7 +10,6 @@ export type DashboardAnalytics = {
     revenue: number
     ticketsSold: number
     startDate: Date
-    categories: string[]
   }>
   dailySales: Array<{ date: string; revenue: number; ticketsSold: number }>
 }
@@ -61,7 +60,6 @@ async function fetchDashboardAnalytics(): Promise<DashboardAnalytics> {
             id: true,
             title: true,
             startDate: true,
-            categories: { select: { category: { select: { name: true } } } },
           },
         }),
         prisma.orderItem.findMany({
@@ -88,7 +86,6 @@ async function fetchDashboardAnalytics(): Promise<DashboardAnalytics> {
       revenue: Number(item._sum?.totalAmount?.toString() ?? '0'),
       ticketsSold: ticketsByEvent.get(item.eventId) ?? 0,
       startDate: event?.startDate ?? new Date(),
-      categories: event?.categories.map((c) => c.category.name) ?? [],
     }
   })
 

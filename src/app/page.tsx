@@ -1,16 +1,10 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/db'
 import { EventList } from '@/components/events/EventList'
-import { HeroSearchBar } from '@/components/events/HeroSearchBar'
 
 export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
-  const categories = await prisma.category.findMany({
-    select: { id: true, name: true, slug: true },
-    orderBy: { name: 'asc' },
-  })
-
   const now = new Date()
 
   const featuredEvents = await prisma.event.findMany({
@@ -40,7 +34,7 @@ export default async function HomePage() {
       { publishedAt: 'desc' },
       { startDate: 'asc' },
     ],
-    take: 6,
+    take: 12,
   })
 
   return (
@@ -63,9 +57,6 @@ export default async function HomePage() {
               </h1>
             </div>
           </div>
-          <div className="mt-4">
-            <HeroSearchBar categories={categories} showCategoryPills={false} />
-          </div>
         </div>
       </section>
 
@@ -86,7 +77,7 @@ export default async function HomePage() {
               View all events
             </Link>
           </div>
-          <EventList events={featuredEvents} />
+          <EventList events={featuredEvents} layout="showcase" />
         </div>
       </section>
 

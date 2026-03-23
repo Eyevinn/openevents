@@ -117,7 +117,6 @@ model PasswordResetToken {
 // ============================================================================
 
 enum Role {
-  ATTENDEE
   ORGANIZER
   SUPER_ADMIN
 }
@@ -135,26 +134,6 @@ model UserRole {
   @@map("user_roles")
 }
 
-model OrganizerRequest {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  orgName     String
-  description String?  @db.Text
-  status      OrganizerRequestStatus @default(PENDING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  reviewedBy  String?
-  reviewedAt  DateTime?
-  reviewNotes String?  @db.Text
-
-  @@map("organizer_requests")
-}
-
-enum OrganizerRequestStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
 
 // ============================================================================
 // ORGANIZER PROFILES
@@ -228,7 +207,6 @@ model Event {
   // Relations
   organizer       OrganizerProfile @relation(fields: [organizerId], references: [id], onDelete: Cascade)
   media           EventMedia[]
-  categories      EventCategory[]
   agendaItems     AgendaItem[]
   speakers        Speaker[]
   ticketTypes     TicketType[]
@@ -281,28 +259,6 @@ enum MediaType {
   VIDEO
 }
 
-model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-
-  events EventCategory[]
-
-  @@map("categories")
-}
-
-model EventCategory {
-  eventId    String
-  categoryId String
-
-  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-  @@id([eventId, categoryId])
-  @@map("event_categories")
-}
 
 model AgendaItem {
   id          String   @id @default(cuid())

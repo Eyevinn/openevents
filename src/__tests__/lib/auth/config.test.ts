@@ -51,6 +51,7 @@ function createMockUser(overrides: Partial<{
   emailVerified: Date | null
   deletedAt: Date | null
   deletionScheduledFor: Date | null
+  mustChangePassword: boolean
   roles: Array<{ role: Role }>
 }> = {}) {
   return {
@@ -63,6 +64,7 @@ function createMockUser(overrides: Partial<{
     emailVerified: new Date('2024-01-01'),
     deletedAt: null,
     deletionScheduledFor: null,
+    mustChangePassword: false,
     roles: [] as Array<{ role: Role }>,
     ...overrides,
   }
@@ -78,6 +80,7 @@ function createEmptySession() {
       image: null,
       roles: [] as Role[],
       emailVerified: null,
+      mustChangePassword: false,
     },
     expires: new Date().toISOString(),
   }
@@ -128,6 +131,7 @@ describe('Auth Config Callbacks', () => {
         image: null,
         roles: [],
         emailVerified: mockUser.emailVerified,
+        mustChangePassword: false,
       })
     })
 
@@ -241,7 +245,7 @@ describe('Auth Config Callbacks', () => {
       ;(prisma.user.findFirst as Mock).mockResolvedValue(mockUser)
 
       const result = await signIn({
-        user: { id: 'user-123', email: 'test@example.com' },
+        user: { id: 'user-123', email: 'test@example.com', emailVerified: null, roles: [], mustChangePassword: false },
         account: null,
         profile: undefined,
       })
@@ -251,7 +255,7 @@ describe('Auth Config Callbacks', () => {
 
     it('returns false when user.id is missing', async () => {
       const result = await signIn({
-        user: { id: '', email: 'test@example.com' },
+        user: { id: '', email: 'test@example.com', emailVerified: null, roles: [], mustChangePassword: false },
         account: null,
         profile: undefined,
       })
@@ -262,7 +266,7 @@ describe('Auth Config Callbacks', () => {
 
     it('returns false when user is undefined', async () => {
       const result = await signIn({
-        user: undefined as unknown as { id: string },
+        user: undefined as any,
         account: null,
         profile: undefined,
       })
@@ -274,7 +278,7 @@ describe('Auth Config Callbacks', () => {
       ;(prisma.user.findFirst as Mock).mockResolvedValue(null)
 
       const result = await signIn({
-        user: { id: 'nonexistent-user', email: 'test@example.com' },
+        user: { id: 'nonexistent-user', email: 'test@example.com', emailVerified: null, roles: [], mustChangePassword: false },
         account: null,
         profile: undefined,
       })
@@ -291,7 +295,7 @@ describe('Auth Config Callbacks', () => {
       })
 
       const result = await signIn({
-        user: { id: 'user-123', email: 'test@example.com' },
+        user: { id: 'user-123', email: 'test@example.com', emailVerified: null, roles: [], mustChangePassword: false },
         account: null,
         profile: undefined,
       })
@@ -306,7 +310,7 @@ describe('Auth Config Callbacks', () => {
       ;(prisma.user.findFirst as Mock).mockResolvedValue(mockUser)
 
       const result = await signIn({
-        user: { id: 'user-123', email: 'test@example.com' },
+        user: { id: 'user-123', email: 'test@example.com', emailVerified: null, roles: [], mustChangePassword: false },
         account: null,
         profile: undefined,
       })
@@ -327,9 +331,10 @@ describe('Auth Config Callbacks', () => {
         image: 'https://example.com/avatar.jpg',
         roles: ['ORGANIZER' as Role],
         emailVerified: new Date('2024-01-01'),
+        mustChangePassword: false,
       }
 
-      const token = { sub: 'user-123' }
+      const token = { sub: 'user-123', id: '', roles: [] as Role[], emailVerified: null, mustChangePassword: false }
 
       const result = await jwt({ token, user, account: null })
 
@@ -352,9 +357,10 @@ describe('Auth Config Callbacks', () => {
         image: null,
         roles: ['ORGANIZER' as Role],
         emailVerified: new Date('2024-01-01'),
+        mustChangePassword: false,
       }
 
-      const result = await jwt({ token, user: undefined, account: null })
+      const result = await jwt({ token, user: undefined as any, account: null })
 
       expect(result).toEqual(token)
     })
@@ -376,11 +382,12 @@ describe('Auth Config Callbacks', () => {
         image: 'old-image.jpg',
         roles: ['ORGANIZER' as Role],
         emailVerified: new Date('2024-01-01'),
+        mustChangePassword: false,
       }
 
       const result = await jwt({
         token,
-        user: undefined,
+        user: undefined as any,
         account: null,
         trigger: 'update',
         session: {},
@@ -406,11 +413,12 @@ describe('Auth Config Callbacks', () => {
         image: 'avatar.jpg',
         roles: ['ORGANIZER' as Role],
         emailVerified: new Date('2024-01-01'),
+        mustChangePassword: false,
       }
 
       const result = await jwt({
         token,
-        user: undefined,
+        user: undefined as any,
         account: null,
         trigger: 'update',
         session: {},
@@ -442,11 +450,12 @@ describe('Auth Config Callbacks', () => {
         image: null,
         roles: ['ORGANIZER' as Role],
         emailVerified: new Date('2024-01-01'),
+        mustChangePassword: false,
       }
 
       const result = await jwt({
         token,
-        user: undefined,
+        user: undefined as any,
         account: null,
         trigger: 'update',
         session: {},
@@ -474,6 +483,7 @@ describe('Auth Config Callbacks', () => {
         email: 'test@example.com',
         roles: ['ORGANIZER' as Role],
         emailVerified: null,
+        mustChangePassword: false,
       }
 
       const result = await session({
@@ -482,7 +492,7 @@ describe('Auth Config Callbacks', () => {
         user: mockSession.user,
         trigger: 'update',
         newSession: undefined,
-      })
+      }) as any
 
       expect(result.user.id).toBe('')
       expect(result.user.roles).toEqual([])
@@ -500,6 +510,7 @@ describe('Auth Config Callbacks', () => {
         email: 'test@example.com',
         roles: ['ORGANIZER' as Role],
         emailVerified: null,
+        mustChangePassword: false,
       }
 
       const result = await session({
@@ -508,7 +519,7 @@ describe('Auth Config Callbacks', () => {
         user: mockSession.user,
         trigger: 'update',
         newSession: undefined,
-      })
+      }) as any
 
       expect(result.user.id).toBe('')
       expect(result.user.roles).toEqual([])
@@ -526,6 +537,7 @@ describe('Auth Config Callbacks', () => {
         email: 'deleted@example.com',
         roles: ['ORGANIZER' as Role],
         emailVerified: null,
+        mustChangePassword: false,
       }
 
       const result = await session({
@@ -534,7 +546,7 @@ describe('Auth Config Callbacks', () => {
         user: mockSession.user,
         trigger: 'update',
         newSession: undefined,
-      })
+      }) as any
 
       expect(result.user.id).toBe('')
       expect(result.user.roles).toEqual([])
@@ -554,6 +566,7 @@ describe('Auth Config Callbacks', () => {
         email: 'test@example.com',
         roles: ['ORGANIZER' as Role],
         emailVerified: null,
+        mustChangePassword: false,
       }
 
       const result = await session({
@@ -562,7 +575,7 @@ describe('Auth Config Callbacks', () => {
         user: mockSession.user,
         trigger: 'update',
         newSession: undefined,
-      })
+      }) as any
 
       expect(finalizeAccountDeletionForUser).toHaveBeenCalledWith('user-123')
       expect(result.user.id).toBe('')
@@ -585,6 +598,7 @@ describe('Auth Config Callbacks', () => {
         email: 'test@example.com',
         roles: ['ORGANIZER' as Role],
         emailVerified: null,
+        mustChangePassword: false,
       }
 
       const result = await session({
@@ -593,7 +607,7 @@ describe('Auth Config Callbacks', () => {
         user: mockSession.user,
         trigger: 'update',
         newSession: undefined,
-      })
+      }) as any
 
       expect(result.user.id).toBe('user-123')
       expect(result.user.email).toBe('test@example.com')
@@ -613,6 +627,7 @@ describe('Auth Config Callbacks', () => {
         email: 'test@example.com',
         roles: ['ORGANIZER' as Role],
         emailVerified: null,
+        mustChangePassword: false,
       }
 
       const result = await session({
@@ -621,7 +636,7 @@ describe('Auth Config Callbacks', () => {
         user: mockSession.user,
         trigger: 'update',
         newSession: undefined,
-      })
+      }) as any
 
       expect(result.user.image).toBe(null)
     })

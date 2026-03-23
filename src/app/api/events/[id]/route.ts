@@ -72,7 +72,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     }
 
     const {
-      categoryIds,
       status,
       bottomImage,
       speakerNames,
@@ -91,19 +90,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         { error: 'End date must be after start date' },
         { status: 400 }
       )
-    }
-
-    if (categoryIds && categoryIds.length > 0) {
-      const existingCategories = await prisma.category.count({
-        where: { id: { in: categoryIds } },
-      })
-
-      if (existingCategories !== categoryIds.length) {
-        return NextResponse.json(
-          { error: 'One or more categoryIds are invalid' },
-          { status: 400 }
-        )
-      }
     }
 
     // Regenerate slug if title is being changed (#208)
@@ -144,15 +130,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
                 : undefined,
         },
       })
-
-      if (categoryIds) {
-        await tx.eventCategory.deleteMany({ where: { eventId: id } })
-        if (categoryIds.length > 0) {
-          await tx.eventCategory.createMany({
-            data: categoryIds.map((categoryId) => ({ eventId: id, categoryId })),
-          })
-        }
-      }
 
       if (bottomImage !== undefined) {
         await tx.eventMedia.deleteMany({
@@ -261,13 +238,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const eventWithRelations = await prisma.event.findUnique({
       where: { id: updatedEvent.id },
-      include: {
-        categories: {
-          include: {
-            category: true,
-          },
-        },
-      },
     })
 
     return NextResponse.json({ data: eventWithRelations })
@@ -394,11 +364,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         ticketTypes: {
           where: { isVisible: true },
           orderBy: { sortOrder: 'asc' },
-        },
-        categories: {
-          include: {
-            category: true,
-          },
         },
       },
     })
