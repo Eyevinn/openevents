@@ -333,7 +333,7 @@ async function generateOrderPdf(orderDetails: {
     // QR codes section
     if (qrBuffers.length > 0 && orderDetails.ticketCodes) {
       doc.moveDown(1.5)
-      doc.fontSize(14).font('Helvetica-Bold').text('Your Tickets')
+      doc.fontSize(14).font('Helvetica-Bold').text('Your tickets - present the QR code(s) below at the door')
       doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke()
       doc.moveDown(0.6)
 

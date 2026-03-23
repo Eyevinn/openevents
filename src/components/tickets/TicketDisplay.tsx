@@ -255,7 +255,7 @@ export function TicketDisplay({ order }: TicketDisplayProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Tickets</CardTitle>
+          <CardTitle className="text-lg">Your tickets - present the QR code(s) below at the door</CardTitle>
         </CardHeader>
         <CardContent>
           {order.tickets.length === 0 ? (
