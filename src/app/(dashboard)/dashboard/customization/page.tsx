@@ -125,7 +125,8 @@ export default function AdminHomepagePage() {
         throw new Error(err.error || 'Failed to save')
       }
 
-      setMessage({ type: 'success', text: 'Homepage settings saved successfully.' })
+      setMessage({ type: 'success', text: 'Settings saved successfully.' })
+      window.dispatchEvent(new Event('customization-updated'))
       router.refresh()
     } catch (error) {
       setMessage({
@@ -150,9 +151,9 @@ export default function AdminHomepagePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Homepage Customization</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Platform Customization</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Customize the hero section that visitors see on the homepage.
+          Customize the look and feel of your platform.
         </p>
       </div>
 

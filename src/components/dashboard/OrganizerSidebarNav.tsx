@@ -8,7 +8,7 @@ import { useSession } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 
 type NavItem = {
-  id: 'scan' | 'overview' | 'events' | 'adminOverview' | 'adminUsers' | 'adminLegal' | 'adminHomepage'
+  id: 'scan' | 'overview' | 'events' | 'adminOverview' | 'adminUsers' | 'adminLegal' | 'adminCustomization'
   href: string
   label: string
   badge?: 'attention'
@@ -28,8 +28,8 @@ function isActive(pathname: string, item: NavItem): boolean {
       return pathname.startsWith('/dashboard/admin/users')
     case 'adminLegal':
       return pathname.startsWith('/dashboard/admin/legal')
-    case 'adminHomepage':
-      return pathname.startsWith('/dashboard/admin/homepage')
+    case 'adminCustomization':
+      return pathname.startsWith('/dashboard/customization')
     default:
       return false
   }
@@ -40,6 +40,7 @@ export function OrganizerSidebarNav() {
   const pathname = usePathname()
   const isSuperAdmin = session?.user?.roles?.includes('SUPER_ADMIN')
   const [legalNeedsAttention, setLegalNeedsAttention] = useState(false)
+  const [customizationNeedsAttention, setCustomizationNeedsAttention] = useState(false)
 
   const checkLegalStatus = useCallback(() => {
     if (!isSuperAdmin) return
@@ -55,12 +56,31 @@ export function OrganizerSidebarNav() {
       .catch(() => {})
   }, [isSuperAdmin])
 
+  const checkCustomizationStatus = useCallback(() => {
+    if (!isSuperAdmin) return
+
+    fetch('/api/admin/homepage')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data?.data) return
+        const { heroText, heroImage } = data.data
+        const isDefault = heroText === 'Events made for business' && !heroImage
+        setCustomizationNeedsAttention(isDefault)
+      })
+      .catch(() => {})
+  }, [isSuperAdmin])
+
   useEffect(() => {
     checkLegalStatus()
+    checkCustomizationStatus()
 
     window.addEventListener('legal-content-updated', checkLegalStatus)
-    return () => window.removeEventListener('legal-content-updated', checkLegalStatus)
-  }, [checkLegalStatus])
+    window.addEventListener('customization-updated', checkCustomizationStatus)
+    return () => {
+      window.removeEventListener('legal-content-updated', checkLegalStatus)
+      window.removeEventListener('customization-updated', checkCustomizationStatus)
+    }
+  }, [checkLegalStatus, checkCustomizationStatus])
 
   const navItems: NavItem[] = [
     { id: 'scan', href: '/dashboard/scan', label: 'Scan Tickets' },
@@ -71,11 +91,11 @@ export function OrganizerSidebarNav() {
     { id: 'adminOverview', href: '/dashboard/admin', label: 'Event Management' },
     { id: 'adminUsers', href: '/dashboard/admin/users', label: 'User Management' },
     { id: 'adminLegal', href: '/dashboard/admin/legal', label: 'Legal & Contact', badge: legalNeedsAttention ? 'attention' : undefined },
-    { id: 'adminHomepage', href: '/dashboard/admin/homepage', label: 'Homepage' },
+    { id: 'adminCustomization', href: '/dashboard/customization', label: 'Platform Customization', badge: customizationNeedsAttention ? 'attention' : undefined },
   ]
 
   const profileSectionActive = pathname === '/dashboard/profile' || pathname.startsWith('/dashboard/settings')
-  const adminSectionActive = pathname === '/dashboard/admin' || pathname.startsWith('/dashboard/admin/users') || pathname.startsWith('/dashboard/admin/legal') || pathname.startsWith('/dashboard/admin/homepage')
+  const adminSectionActive = pathname === '/dashboard/admin' || pathname.startsWith('/dashboard/admin/users') || pathname.startsWith('/dashboard/admin/legal') || pathname.startsWith('/dashboard/customization')
   const [adminMenuExpanded, setAdminMenuExpanded] = useState(false)
   const [adminMenuOverride, setAdminMenuOverride] = useState<{ path: string; open: boolean } | null>(null)
   const autoAdminOpen = adminMenuExpanded || adminSectionActive

@@ -154,6 +154,48 @@ body {
   color: #94a3b8 !important;
 }
 
+/* --- Pastel / colored backgrounds (about, contact pages) --- */
+[data-theme="dark"] .bg-blue-50 {
+  background-color: #1e3a5f !important;
+}
+[data-theme="dark"] .bg-green-50 {
+  background-color: #1a3a2a !important;
+}
+[data-theme="dark"] .bg-purple-50 {
+  background-color: #2d1f4e !important;
+}
+[data-theme="dark"] .bg-orange-50 {
+  background-color: #3d2a1a !important;
+}
+[data-theme="dark"] .bg-cyan-50 {
+  background-color: #1a3344 !important;
+}
+[data-theme="dark"] .bg-amber-50 {
+  background-color: #3d2f1a !important;
+}
+[data-theme="dark"] .bg-red-50 {
+  background-color: #3d1a1a !important;
+}
+[data-theme="dark"] .from-blue-50 {
+  --tw-gradient-from: #1e3a5f !important;
+}
+[data-theme="dark"] .to-cyan-50 {
+  --tw-gradient-to: #1a3344 !important;
+}
+/* Colored text on pastel backgrounds */
+[data-theme="dark"] .text-blue-600 {
+  color: #93b4e8 !important;
+}
+[data-theme="dark"] .text-green-600 {
+  color: #86d9a8 !important;
+}
+[data-theme="dark"] .text-purple-600 {
+  color: #b794e8 !important;
+}
+[data-theme="dark"] .text-orange-600 {
+  color: #e8a86b !important;
+}
+
 /* --- Specific component overrides --- */
 
 /* Pagination controls */
