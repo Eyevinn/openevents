@@ -49,11 +49,6 @@ export default async function AccountSettingsPage({ searchParams }: PageProps) {
       passwordHash: true,
       deletionRequestedAt: true,
       deletionScheduledFor: true,
-      accounts: {
-        select: {
-          provider: true,
-        },
-      },
     },
   })
 
@@ -188,7 +183,6 @@ export default async function AccountSettingsPage({ searchParams }: PageProps) {
   return (
     <AccountSettings
       userEmail={dbUser.email}
-      connectedAccounts={dbUser.accounts.map((account) => account.provider)}
       updateEmailAction={updateEmailAction}
       changePasswordAction={changePasswordAction}
       deleteAccountAction={deleteAccountAction}
