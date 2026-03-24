@@ -30,14 +30,14 @@ type LegalContactFormProps = {
 }
 
 const tabs: { id: Tab; label: string }[] = [
-  { id: 'tos', label: 'Terms of Service' },
   { id: 'about', label: 'About Us' },
-  { id: 'privacy', label: 'Privacy Policy' },
   { id: 'contact', label: 'Contact' },
+  { id: 'privacy', label: 'Privacy Policy' },
+  { id: 'tos', label: 'Terms of Service' },
 ]
 
 export function LegalContactForm({ initialData }: LegalContactFormProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('tos')
+  const [activeTab, setActiveTab] = useState<Tab>('about')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
