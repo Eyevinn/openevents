@@ -70,6 +70,9 @@ export default async function RootLayout({
     platform_name: 'OpenEvents',
     platform_logo: '',
     platform_favicon: '',
+    footer_tagline: 'Organizing events starts here',
+    footer_links: '',
+    footer_show_organizer_login: 'true',
   })
 
   const theme = settings.platform_theme
@@ -100,7 +103,12 @@ export default async function RootLayout({
               brandColor={brandColor}
             />
             <main className="flex-1">{children}</main>
-            <Footer platformName={settings.platform_name} />
+            <Footer
+              platformName={settings.platform_name}
+              tagline={settings.footer_tagline}
+              links={settings.footer_links ? JSON.parse(settings.footer_links) : undefined}
+              showOrganizerLoginLink={settings.footer_show_organizer_login !== 'false'}
+            />
           </div>
         </Providers>
       </body>

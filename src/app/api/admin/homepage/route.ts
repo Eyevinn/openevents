@@ -11,6 +11,9 @@ const SETTINGS_DEFAULTS = {
   platform_logo: '',
   platform_favicon: '',
   platform_brand_color: '#5C8BD9',
+  footer_tagline: 'Organizing events starts here',
+  footer_links: '',
+  footer_show_organizer_login: 'true',
 }
 
 const updateSettingsSchema = z.object({
@@ -21,6 +24,13 @@ const updateSettingsSchema = z.object({
   platformLogo: z.string().max(2000).optional(),
   platformFavicon: z.string().max(2000).optional(),
   brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color').optional(),
+  footerTagline: z.string().max(200).optional(),
+  footerLinks: z.array(z.object({
+    label: z.string().min(1).max(100),
+    href: z.string().min(1).max(500),
+    external: z.boolean().optional(),
+  })).optional(),
+  footerShowOrganizerLogin: z.boolean().optional(),
 })
 
 export async function GET() {
@@ -38,6 +48,9 @@ export async function GET() {
         platformLogo: settings.platform_logo,
         platformFavicon: settings.platform_favicon,
         brandColor: settings.platform_brand_color,
+        footerTagline: settings.footer_tagline,
+        footerLinks: settings.footer_links ? JSON.parse(settings.footer_links) : null,
+        footerShowOrganizerLogin: settings.footer_show_organizer_login !== 'false',
       },
     })
   } catch (error) {
@@ -75,6 +88,9 @@ export async function POST(request: NextRequest) {
     if (platformLogo !== undefined) await setPlatformSetting('platform_logo', platformLogo)
     if (platformFavicon !== undefined) await setPlatformSetting('platform_favicon', platformFavicon)
     if (brandColor !== undefined) await setPlatformSetting('platform_brand_color', brandColor)
+    if (parsed.data.footerTagline !== undefined) await setPlatformSetting('footer_tagline', parsed.data.footerTagline)
+    if (parsed.data.footerLinks !== undefined) await setPlatformSetting('footer_links', JSON.stringify(parsed.data.footerLinks), 'json')
+    if (parsed.data.footerShowOrganizerLogin !== undefined) await setPlatformSetting('footer_show_organizer_login', String(parsed.data.footerShowOrganizerLogin))
 
     return NextResponse.json({ data: { success: true } })
   } catch (error) {

@@ -4,6 +4,15 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ImageIcon, Upload, X, Loader2, Sun, Moon } from 'lucide-react'
 
+type FooterLink = { label: string; href: string; external?: boolean }
+
+const DEFAULT_FOOTER_LINKS: FooterLink[] = [
+  { label: 'About Us', href: '/about' },
+  { label: 'Contact Us', href: '/contact' },
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Service', href: '/terms' },
+]
+
 const DEFAULTS = {
   heroText: 'Events made for business',
   heroImage: '',
@@ -12,6 +21,8 @@ const DEFAULTS = {
   platformLogo: '',
   platformFavicon: '',
   brandColor: '#5C8BD9',
+  footerTagline: 'Organizing events starts here',
+  footerShowOrganizerLogin: true,
 }
 
 export default function AdminCustomizationPage() {
@@ -27,6 +38,9 @@ export default function AdminCustomizationPage() {
   const [platformLogo, setPlatformLogo] = useState('')
   const [platformFavicon, setPlatformFavicon] = useState('')
   const [brandColor, setBrandColor] = useState(DEFAULTS.brandColor)
+  const [footerTagline, setFooterTagline] = useState(DEFAULTS.footerTagline)
+  const [footerLinks, setFooterLinks] = useState<FooterLink[]>(DEFAULT_FOOTER_LINKS)
+  const [footerShowOrganizerLogin, setFooterShowOrganizerLogin] = useState(true)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -46,6 +60,9 @@ export default function AdminCustomizationPage() {
           setPlatformLogo(data.platformLogo || '')
           setPlatformFavicon(data.platformFavicon || '')
           setBrandColor(data.brandColor || DEFAULTS.brandColor)
+          setFooterTagline(data.footerTagline ?? DEFAULTS.footerTagline)
+          if (data.footerLinks) setFooterLinks(data.footerLinks)
+          setFooterShowOrganizerLogin(data.footerShowOrganizerLogin !== false)
         }
       } catch {
         // Use defaults on error
@@ -143,6 +160,9 @@ export default function AdminCustomizationPage() {
           platformLogo,
           platformFavicon,
           brandColor,
+          footerTagline,
+          footerLinks: footerLinks.filter(l => l.label.trim() && l.href.trim()),
+          footerShowOrganizerLogin,
         }),
       })
 
@@ -435,6 +455,112 @@ export default function AdminCustomizationPage() {
       </div>
 
       {/* ================================================================
+          FOOTER SECTION
+          ================================================================ */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Footer</h2>
+
+        {/* Tagline */}
+        <div>
+          <label htmlFor="footerTagline" className="block text-sm font-medium text-gray-700">
+            Tagline
+          </label>
+          <p className="mt-1 text-xs text-gray-500">
+            Short text displayed below the platform name in the footer. Leave empty to hide.
+          </p>
+          <input
+            id="footerTagline"
+            type="text"
+            value={footerTagline}
+            onChange={(e) => setFooterTagline(e.target.value)}
+            placeholder={DEFAULTS.footerTagline}
+            maxLength={200}
+            className="mt-2 block w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+          />
+        </div>
+
+        {/* Footer Links */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Footer Links</label>
+          <p className="mt-1 text-xs text-gray-500">
+            Customize the navigation links shown in the footer.
+          </p>
+          <div className="mt-3 space-y-3">
+            {footerLinks.map((link, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={link.label}
+                  onChange={(e) => {
+                    const updated = [...footerLinks]
+                    updated[index] = { ...updated[index], label: e.target.value }
+                    setFooterLinks(updated)
+                  }}
+                  placeholder="Label"
+                  className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+                />
+                <input
+                  type="text"
+                  value={link.href}
+                  onChange={(e) => {
+                    const updated = [...footerLinks]
+                    updated[index] = { ...updated[index], href: e.target.value }
+                    setFooterLinks(updated)
+                  }}
+                  placeholder="/page or https://..."
+                  className="flex-1 max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+                />
+                <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <input
+                    type="checkbox"
+                    checked={link.external ?? false}
+                    onChange={(e) => {
+                      const updated = [...footerLinks]
+                      updated[index] = { ...updated[index], external: e.target.checked }
+                      setFooterLinks(updated)
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  External
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setFooterLinks(footerLinks.filter((_, i) => i !== index))}
+                  className="rounded p-1 text-gray-400 hover:text-red-600 transition"
+                  aria-label="Remove link"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => setFooterLinks([...footerLinks, { label: '', href: '' }])}
+              className="text-sm font-medium text-[#5C8BD9] hover:text-[#4a7ac8]"
+            >
+              + Add link
+            </button>
+          </div>
+        </div>
+
+        {/* Show Organizer Login */}
+        <div>
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={footerShowOrganizerLogin}
+              onChange={(e) => setFooterShowOrganizerLogin(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-300 text-[#5C8BD9] focus:ring-[#5C8BD9]"
+            />
+            <div>
+              <span className="text-sm font-medium text-gray-700">Show &quot;Organizer Login&quot; link</span>
+              <p className="text-xs text-gray-500">Displays a login link in the footer for unauthenticated visitors.</p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* ================================================================
           APPEARANCE SECTION
           ================================================================ */}
       <div className="space-y-6">
@@ -506,6 +632,9 @@ export default function AdminCustomizationPage() {
             setPlatformLogo('')
             setPlatformFavicon('')
             setBrandColor(DEFAULTS.brandColor)
+            setFooterTagline(DEFAULTS.footerTagline)
+            setFooterLinks(DEFAULT_FOOTER_LINKS)
+            setFooterShowOrganizerLogin(true)
           }}
           className="text-sm text-gray-500 hover:text-gray-700"
         >
