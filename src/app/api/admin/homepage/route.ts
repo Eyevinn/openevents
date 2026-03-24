@@ -7,12 +7,20 @@ const SETTINGS_DEFAULTS = {
   homepage_hero_text: 'Events made for business',
   homepage_hero_image: '',
   platform_theme: 'light',
+  platform_name: 'OpenEvents',
+  platform_logo: '',
+  platform_favicon: '',
+  platform_brand_color: '#5C8BD9',
 }
 
-const updateHomepageSchema = z.object({
+const updateSettingsSchema = z.object({
   heroText: z.string().min(1).max(200),
   heroImage: z.string().max(2000).optional(),
   theme: z.enum(['light', 'dark']).optional(),
+  platformName: z.string().min(1).max(100).optional(),
+  platformLogo: z.string().max(2000).optional(),
+  platformFavicon: z.string().max(2000).optional(),
+  brandColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Must be a valid hex color').optional(),
 })
 
 export async function GET() {
@@ -26,6 +34,10 @@ export async function GET() {
         heroText: settings.homepage_hero_text,
         heroImage: settings.homepage_hero_image,
         theme: settings.platform_theme,
+        platformName: settings.platform_name,
+        platformLogo: settings.platform_logo,
+        platformFavicon: settings.platform_favicon,
+        brandColor: settings.platform_brand_color,
       },
     })
   } catch (error) {
@@ -45,7 +57,7 @@ export async function POST(request: NextRequest) {
     await requireRole(['SUPER_ADMIN'])
 
     const body = await request.json()
-    const parsed = updateHomepageSchema.safeParse(body)
+    const parsed = updateSettingsSchema.safeParse(body)
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -54,23 +66,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { heroText, heroImage, theme } = parsed.data
+    const { heroText, heroImage, theme, platformName, platformLogo, platformFavicon, brandColor } = parsed.data
 
     await setPlatformSetting('homepage_hero_text', heroText)
-    if (heroImage !== undefined) {
-      await setPlatformSetting('homepage_hero_image', heroImage)
-    }
-    if (theme !== undefined) {
-      await setPlatformSetting('platform_theme', theme)
-    }
+    if (heroImage !== undefined) await setPlatformSetting('homepage_hero_image', heroImage)
+    if (theme !== undefined) await setPlatformSetting('platform_theme', theme)
+    if (platformName !== undefined) await setPlatformSetting('platform_name', platformName)
+    if (platformLogo !== undefined) await setPlatformSetting('platform_logo', platformLogo)
+    if (platformFavicon !== undefined) await setPlatformSetting('platform_favicon', platformFavicon)
+    if (brandColor !== undefined) await setPlatformSetting('platform_brand_color', brandColor)
 
-    return NextResponse.json({
-      data: {
-        heroText,
-        heroImage: heroImage ?? '',
-        theme: theme ?? 'light',
-      },
-    })
+    return NextResponse.json({ data: { success: true } })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'Unauthorized')
@@ -78,7 +84,7 @@ export async function POST(request: NextRequest) {
       if (error.message.includes('Forbidden'))
         return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    console.error('Update homepage settings failed:', error)
+    console.error('Update settings failed:', error)
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
   }
 }

@@ -3,7 +3,11 @@
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 
-export function Footer() {
+type FooterProps = {
+  platformName?: string
+}
+
+export function Footer({ platformName = 'OpenEvents' }: FooterProps) {
   const { status } = useSession()
   const showOrganizerLogin = status === 'unauthenticated'
 
@@ -14,7 +18,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <Link href="/" className="text-2xl font-bold text-gray-900">
-              OpenEvents
+              {platformName}
             </Link>
             <p className="mt-2 text-sm text-gray-500">
               Organizing events starts here

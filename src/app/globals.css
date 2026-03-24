@@ -11,6 +11,42 @@
   --text-secondary: #4b5563;
   --text-muted: #6b7280;
   --text-faint: #9ca3af;
+  --brand-color: #5C8BD9;
+  --brand-color-hover: #4a7ac8;
+}
+
+/* Brand color overrides — remap hardcoded #5C8BD9 to the CSS variable */
+.bg-\[\#5C8BD9\],
+.bg-\[\#5c8bd9\] {
+  background-color: var(--brand-color) !important;
+}
+.hover\:bg-\[\#4a7ac8\]:hover,
+.hover\:bg-\[\#4A7AC8\]:hover {
+  background-color: var(--brand-color-hover) !important;
+}
+.text-\[\#5C8BD9\],
+.text-\[\#5c8bd9\] {
+  color: var(--brand-color) !important;
+}
+.hover\:text-\[\#4a7ac8\]:hover,
+.hover\:text-\[\#4A7AC8\]:hover {
+  color: var(--brand-color-hover) !important;
+}
+.border-\[\#5C8BD9\],
+.border-\[\#5c8bd9\] {
+  border-color: var(--brand-color) !important;
+}
+.focus\:border-\[\#5C8BD9\]:focus {
+  border-color: var(--brand-color) !important;
+}
+.focus\:ring-\[\#5C8BD9\]:focus {
+  --tw-ring-color: var(--brand-color) !important;
+}
+.prose-a\:text-\[\#5c8bd9\] :is(:where(a):not(:where([class~="not-prose"],[class~="not-prose"] *))) {
+  color: var(--brand-color) !important;
+}
+.prose-a\:hover\:text-\[\#4a7ac8\] :is(:where(a):not(:where([class~="not-prose"],[class~="not-prose"] *)):hover) {
+  color: var(--brand-color-hover) !important;
 }
 
 [data-theme="dark"] {

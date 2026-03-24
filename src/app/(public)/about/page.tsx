@@ -1,4 +1,5 @@
 import { getLegalContent } from '@/lib/legal-content'
+import { getPlatformSetting } from '@/lib/platform-settings'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,7 +88,10 @@ function DefaultAboutContent() {
 }
 
 export default async function AboutPage() {
-  const customContent = await getLegalContent('legal_about')
+  const [customContent, platformName] = await Promise.all([
+    getLegalContent('legal_about'),
+    getPlatformSetting('platform_name', 'OpenEvents'),
+  ])
 
   return (
     <main className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
@@ -99,6 +103,28 @@ export default async function AboutPage() {
               className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-a:text-[#5C8BD9] prose-a:hover:text-[#4a7ac8]"
               dangerouslySetInnerHTML={{ __html: customContent.html }}
             />
+
+            {/* OpenEvents attribution */}
+            <div className="mt-12 rounded-lg border border-gray-200 bg-gray-50 p-6">
+              <p className="text-sm text-gray-600">
+                {platformName !== 'OpenEvents' ? (
+                  <>{platformName} is powered by <strong>OpenEvents</strong> — </>
+                ) : (
+                  <>This platform is powered by <strong>OpenEvents</strong> — </>
+                )}
+                an open-source event management and ticketing platform that enables
+                organizations to create, manage, and sell tickets to events.
+                Learn more at{' '}
+                <a
+                  href="https://github.com/Eyevinn/openevents"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#5C8BD9] hover:text-[#4a7ac8] font-medium"
+                >
+                  github.com/Eyevinn/openevents
+                </a>.
+              </p>
+            </div>
           </div>
         ) : (
           <DefaultAboutContent />

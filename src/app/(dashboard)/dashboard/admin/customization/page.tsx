@@ -4,19 +4,33 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ImageIcon, Upload, X, Loader2, Sun, Moon } from 'lucide-react'
 
-const DEFAULT_HERO_TEXT = 'Events made for business'
+const DEFAULTS = {
+  heroText: 'Events made for business',
+  heroImage: '',
+  theme: 'light' as const,
+  platformName: 'OpenEvents',
+  platformLogo: '',
+  platformFavicon: '',
+  brandColor: '#5C8BD9',
+}
 
-export default function AdminHomepagePage() {
+export default function AdminCustomizationPage() {
   const router = useRouter()
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const heroFileInputRef = useRef<HTMLInputElement>(null)
+  const logoFileInputRef = useRef<HTMLInputElement>(null)
+  const faviconFileInputRef = useRef<HTMLInputElement>(null)
 
-  const [heroText, setHeroText] = useState(DEFAULT_HERO_TEXT)
+  const [heroText, setHeroText] = useState(DEFAULTS.heroText)
   const [heroImage, setHeroImage] = useState('')
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [platformName, setPlatformName] = useState(DEFAULTS.platformName)
+  const [platformLogo, setPlatformLogo] = useState('')
+  const [platformFavicon, setPlatformFavicon] = useState('')
+  const [brandColor, setBrandColor] = useState(DEFAULTS.brandColor)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   useEffect(() => {
@@ -25,9 +39,13 @@ export default function AdminHomepagePage() {
         const res = await fetch('/api/admin/homepage')
         if (res.ok) {
           const { data } = await res.json()
-          setHeroText(data.heroText || DEFAULT_HERO_TEXT)
+          setHeroText(data.heroText || DEFAULTS.heroText)
           setHeroImage(data.heroImage || '')
           setTheme(data.theme === 'dark' ? 'dark' : 'light')
+          setPlatformName(data.platformName || DEFAULTS.platformName)
+          setPlatformLogo(data.platformLogo || '')
+          setPlatformFavicon(data.platformFavicon || '')
+          setBrandColor(data.brandColor || DEFAULTS.brandColor)
         }
       } catch {
         // Use defaults on error
@@ -38,17 +56,17 @@ export default function AdminHomepagePage() {
     loadSettings()
   }, [])
 
-  async function handleImageUpload(file: File) {
-    setUploading(true)
+  async function uploadFile(file: File, entityId: string, onSuccess: (url: string) => void) {
+    const uploadKey = entityId
+    setUploading(uploadKey)
     setMessage(null)
 
     try {
-      // Step 1: Get presigned URL
       const presignedRes = await fetch('/api/upload/presigned', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entityId: 'homepage',
+          entityId,
           filename: file.name,
           contentType: file.type,
           size: file.size,
@@ -56,53 +74,57 @@ export default function AdminHomepagePage() {
         }),
       })
 
-      if (!presignedRes.ok) {
-        throw new Error('Failed to get upload URL')
-      }
+      if (!presignedRes.ok) throw new Error('Failed to get upload URL')
 
       const { data } = await presignedRes.json()
 
-      // Step 2: Upload directly to S3/MinIO
       const uploadRes = await fetch(data.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
         body: file,
       })
 
-      if (!uploadRes.ok) {
-        throw new Error('Failed to upload image')
-      }
+      if (!uploadRes.ok) throw new Error('Failed to upload file')
 
-      setHeroImage(data.publicUrl)
-      setPreviewImage(null)
-      setMessage({ type: 'success', text: 'Image uploaded successfully' })
+      onSuccess(data.publicUrl)
+      setMessage({ type: 'success', text: 'File uploaded successfully' })
     } catch {
-      setMessage({ type: 'error', text: 'Failed to upload image. Please try again.' })
+      setMessage({ type: 'error', text: 'Failed to upload file. Please try again.' })
     } finally {
-      setUploading(false)
+      setUploading(null)
     }
   }
 
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileSelect(
+    e: React.ChangeEvent<HTMLInputElement>,
+    entityId: string,
+    onSuccess: (url: string) => void,
+    opts?: { maxSize?: number; allowSvg?: boolean }
+  ) {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setMessage({ type: 'error', text: 'Please select a JPEG, PNG, or WebP image.' })
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (opts?.allowSvg) validTypes.push('image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon')
+
+    if (!validTypes.includes(file.type)) {
+      setMessage({ type: 'error', text: `Please select a valid image file.` })
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Image must be smaller than 10MB.' })
+    const maxSize = opts?.maxSize ?? 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      setMessage({ type: 'error', text: `File must be smaller than ${Math.round(maxSize / 1024 / 1024)}MB.` })
       return
     }
 
-    // Show preview
-    const reader = new FileReader()
-    reader.onload = () => setPreviewImage(reader.result as string)
-    reader.readAsDataURL(file)
+    if (entityId === 'homepage') {
+      const reader = new FileReader()
+      reader.onload = () => setPreviewImage(reader.result as string)
+      reader.readAsDataURL(file)
+    }
 
-    handleImageUpload(file)
+    uploadFile(file, entityId, onSuccess)
   }
 
   async function handleSave() {
@@ -117,6 +139,10 @@ export default function AdminHomepagePage() {
           heroText: heroText.trim(),
           heroImage,
           theme,
+          platformName: platformName.trim(),
+          platformLogo,
+          platformFavicon,
+          brandColor,
         }),
       })
 
@@ -149,11 +175,11 @@ export default function AdminHomepagePage() {
   const displayImage = previewImage || heroImage || '/hero-image.jpg'
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Platform Customization</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Customize the look and feel of your platform.
+          Customize the branding and look of your platform.
         </p>
       </div>
 
@@ -169,160 +195,300 @@ export default function AdminHomepagePage() {
         </div>
       )}
 
-      {/* Live Preview */}
-      <div>
-        <h2 className="mb-3 text-sm font-medium text-gray-700">Preview</h2>
-        <div className="relative w-full overflow-hidden rounded-[20px]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={displayImage}
-            alt="Hero preview"
-            className="h-[160px] w-full object-cover sm:h-[220px] md:h-[280px]"
+      {/* ================================================================
+          BRANDING SECTION
+          ================================================================ */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Branding</h2>
+
+        {/* Platform Name */}
+        <div>
+          <label htmlFor="platformName" className="block text-sm font-medium text-gray-700">
+            Platform Name
+          </label>
+          <p className="mt-1 text-xs text-gray-500">
+            Displayed in the header, footer, browser tab, and metadata.
+          </p>
+          <input
+            id="platformName"
+            type="text"
+            value={platformName}
+            onChange={(e) => setPlatformName(e.target.value)}
+            placeholder={DEFAULTS.platformName}
+            maxLength={100}
+            className="mt-2 block w-full max-w-md rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
           />
-          <div className="absolute left-4 right-4 top-[10%] rounded-[20px] border border-[rgba(255,255,255,0.31)] bg-[rgba(217,217,217,0.10)] px-4 py-3 backdrop-blur-[17.5px] sm:left-8 sm:right-auto sm:px-6 sm:py-4 md:left-10">
-            <p
-              className="text-lg font-bold leading-tight text-white sm:text-2xl md:text-3xl"
-              style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
-            >
-              {heroText || DEFAULT_HERO_TEXT}
-            </p>
-          </div>
         </div>
-      </div>
 
-      {/* Hero Text */}
-      <div>
-        <label htmlFor="heroText" className="block text-sm font-medium text-gray-700">
-          Hero Text
-        </label>
-        <p className="mt-1 text-xs text-gray-500">
-          The main heading displayed over the hero image.
-        </p>
-        <input
-          id="heroText"
-          type="text"
-          value={heroText}
-          onChange={(e) => setHeroText(e.target.value)}
-          placeholder={DEFAULT_HERO_TEXT}
-          maxLength={200}
-          className="mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
-        />
-        <p className="mt-1 text-xs text-gray-400">{heroText.length}/200 characters</p>
-      </div>
-
-      {/* Hero Image */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Hero Image</label>
-        <p className="mt-1 text-xs text-gray-500">
-          Recommended: 1920×600px or wider. JPEG, PNG, or WebP. Max 10MB.
-        </p>
-
-        <div className="mt-3 flex items-start gap-4">
-          {/* Current image thumbnail */}
-          <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-            {displayImage ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={displayImage}
-                  alt="Current hero"
-                  className="h-full w-full object-cover"
-                />
-                {uploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <Loader2 className="h-5 w-5 animate-spin text-white" />
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <ImageIcon className="h-8 w-8 text-gray-300" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
-            >
-              <Upload className="h-4 w-4" />
-              {uploading ? 'Uploading...' : 'Upload Image'}
-            </button>
-
-            {heroImage && (
+        {/* Brand Color */}
+        <div>
+          <label htmlFor="brandColor" className="block text-sm font-medium text-gray-700">
+            Brand Color
+          </label>
+          <p className="mt-1 text-xs text-gray-500">
+            Accent color used for buttons, links, and active states across the site.
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <input
+              id="brandColor"
+              type="color"
+              value={brandColor}
+              onChange={(e) => setBrandColor(e.target.value)}
+              className="h-10 w-14 cursor-pointer rounded border border-gray-300 p-1"
+            />
+            <input
+              type="text"
+              value={brandColor}
+              onChange={(e) => {
+                const val = e.target.value
+                if (/^#[0-9a-fA-F]{0,6}$/.test(val)) setBrandColor(val)
+              }}
+              maxLength={7}
+              className="w-28 rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+            />
+            {brandColor !== DEFAULTS.brandColor && (
               <button
                 type="button"
-                onClick={() => {
-                  setHeroImage('')
-                  setPreviewImage(null)
-                }}
-                className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700"
+                onClick={() => setBrandColor(DEFAULTS.brandColor)}
+                className="text-xs text-gray-500 hover:text-gray-700"
               >
-                <X className="h-3 w-3" />
-                Remove (use default)
+                Reset
               </button>
             )}
           </div>
+          {/* Color preview */}
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-xs text-gray-500">Preview:</span>
+            <button
+              type="button"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm"
+              style={{ backgroundColor: brandColor }}
+              disabled
+            >
+              Sample Button
+            </button>
+            <span className="text-sm font-medium" style={{ color: brandColor }}>Sample Link</span>
+          </div>
+        </div>
 
+        {/* Logo */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Logo</label>
+          <p className="mt-1 text-xs text-gray-500">
+            Replaces the platform name text in the header. Recommended: SVG or PNG with transparent background, max height 36px.
+          </p>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="flex h-12 w-40 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50 px-2">
+              {platformLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={platformLogo} alt="Logo" className="h-full w-auto object-contain" />
+              ) : (
+                <span className="text-xs text-gray-400">No logo</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => logoFileInputRef.current?.click()}
+                disabled={uploading === 'logo'}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" />
+                {uploading === 'logo' ? 'Uploading...' : 'Upload Logo'}
+              </button>
+              {platformLogo && (
+                <button type="button" onClick={() => setPlatformLogo('')} className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700">
+                  <X className="h-3 w-3" /> Remove
+                </button>
+              )}
+            </div>
+            <input ref={logoFileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" onChange={(e) => handleFileSelect(e, 'logo', setPlatformLogo)} className="hidden" />
+          </div>
+        </div>
+
+        {/* Favicon */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Favicon</label>
+          <p className="mt-1 text-xs text-gray-500">
+            The small icon shown in the browser tab. Recommended: 32×32px or 64×64px PNG, ICO, or SVG.
+          </p>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              {platformFavicon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={platformFavicon} alt="Favicon" className="h-6 w-6 object-contain" />
+              ) : (
+                <ImageIcon className="h-4 w-4 text-gray-300" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => faviconFileInputRef.current?.click()}
+                disabled={uploading === 'favicon'}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" />
+                {uploading === 'favicon' ? 'Uploading...' : 'Upload Favicon'}
+              </button>
+              {platformFavicon && (
+                <button type="button" onClick={() => setPlatformFavicon('')} className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700">
+                  <X className="h-3 w-3" /> Remove
+                </button>
+              )}
+            </div>
+            <input ref={faviconFileInputRef} type="file" accept="image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon" onChange={(e) => handleFileSelect(e, 'favicon', setPlatformFavicon, { maxSize: 1024 * 1024, allowSvg: true })} className="hidden" />
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================
+          HOMEPAGE SECTION
+          ================================================================ */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Homepage</h2>
+
+        {/* Live Preview */}
+        <div>
+          <label className="mb-3 block text-sm font-medium text-gray-700">Preview</label>
+          <div className="relative w-full overflow-hidden rounded-[20px]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={displayImage}
+              alt="Hero preview"
+              className="h-[160px] w-full object-cover sm:h-[220px] md:h-[280px]"
+            />
+            <div className="absolute left-4 right-4 top-[10%] rounded-[20px] border border-[rgba(255,255,255,0.31)] bg-[rgba(217,217,217,0.10)] px-4 py-3 backdrop-blur-[17.5px] sm:left-8 sm:right-auto sm:px-6 sm:py-4 md:left-10">
+              <p
+                className="text-lg font-bold leading-tight text-white sm:text-2xl md:text-3xl"
+                style={{ fontFamily: 'var(--font-outfit), sans-serif' }}
+              >
+                {heroText || DEFAULTS.heroText}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Text */}
+        <div>
+          <label htmlFor="heroText" className="block text-sm font-medium text-gray-700">
+            Hero Text
+          </label>
+          <p className="mt-1 text-xs text-gray-500">
+            The main heading displayed over the hero image.
+          </p>
           <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={handleFileSelect}
-            className="hidden"
+            id="heroText"
+            type="text"
+            value={heroText}
+            onChange={(e) => setHeroText(e.target.value)}
+            placeholder={DEFAULTS.heroText}
+            maxLength={200}
+            className="mt-2 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
           />
+          <p className="mt-1 text-xs text-gray-400">{heroText.length}/200 characters</p>
+        </div>
+
+        {/* Hero Image */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Hero Image</label>
+          <p className="mt-1 text-xs text-gray-500">
+            Recommended: 1920×600px or wider. JPEG, PNG, or WebP. Max 10MB.
+          </p>
+          <div className="mt-3 flex items-start gap-4">
+            <div className="relative h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+              {displayImage ? (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={displayImage} alt="Current hero" className="h-full w-full object-cover" />
+                  {uploading === 'homepage' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <ImageIcon className="h-8 w-8 text-gray-300" />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => heroFileInputRef.current?.click()}
+                disabled={uploading === 'homepage'}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Upload className="h-4 w-4" />
+                {uploading === 'homepage' ? 'Uploading...' : 'Upload Image'}
+              </button>
+              {heroImage && (
+                <button type="button" onClick={() => { setHeroImage(''); setPreviewImage(null) }} className="inline-flex items-center gap-1 text-sm text-red-600 hover:text-red-700">
+                  <X className="h-3 w-3" /> Remove (use default)
+                </button>
+              )}
+            </div>
+            <input ref={heroFileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => handleFileSelect(e, 'homepage', (url) => { setHeroImage(url); setPreviewImage(null) })} className="hidden" />
+          </div>
         </div>
       </div>
 
-      {/* Theme */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Site Theme</label>
-        <p className="mt-1 text-xs text-gray-500">
-          Choose between a light or dark theme for the entire website.
-        </p>
-        <div className="mt-3 flex gap-3">
-          <button
-            type="button"
-            onClick={() => setTheme('light')}
-            className={`flex items-center gap-3 rounded-lg border-2 px-5 py-3 transition ${
-              theme === 'light'
-                ? 'border-[#5C8BD9] bg-blue-50 text-[#5C8BD9]'
-                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Sun className="h-5 w-5" />
-            <div className="text-left">
-              <p className="text-sm font-semibold">Light</p>
-              <p className="text-xs opacity-70">Default theme</p>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => setTheme('dark')}
-            className={`flex items-center gap-3 rounded-lg border-2 px-5 py-3 transition ${
-              theme === 'dark'
-                ? 'border-[#5C8BD9] bg-blue-50 text-[#5C8BD9]'
-                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Moon className="h-5 w-5" />
-            <div className="text-left">
-              <p className="text-sm font-semibold">Dark</p>
-              <p className="text-xs opacity-70">Dark background</p>
-            </div>
-          </button>
+      {/* ================================================================
+          APPEARANCE SECTION
+          ================================================================ */}
+      <div className="space-y-6">
+        <h2 className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">Appearance</h2>
+
+        {/* Theme */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Site Theme</label>
+          <p className="mt-1 text-xs text-gray-500">
+            Choose between a light or dark theme for the entire website.
+          </p>
+          <div className="mt-3 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setTheme('light')}
+              className={`flex items-center gap-3 rounded-lg border-2 px-5 py-3 transition ${
+                theme === 'light'
+                  ? 'border-[#5C8BD9] bg-blue-50 text-[#5C8BD9]'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Sun className="h-5 w-5" />
+              <div className="text-left">
+                <p className="text-sm font-semibold">Light</p>
+                <p className="text-xs opacity-70">Default theme</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              className={`flex items-center gap-3 rounded-lg border-2 px-5 py-3 transition ${
+                theme === 'dark'
+                  ? 'border-[#5C8BD9] bg-blue-50 text-[#5C8BD9]'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Moon className="h-5 w-5" />
+              <div className="text-left">
+                <p className="text-sm font-semibold">Dark</p>
+                <p className="text-xs opacity-70">Dark background</p>
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* ================================================================
+          SAVE
+          ================================================================ */}
       <div className="flex items-center gap-4 border-t border-gray-200 pt-6">
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || uploading || !heroText.trim()}
+          disabled={saving || !!uploading || !heroText.trim() || !platformName.trim()}
           className="inline-flex items-center gap-2 rounded-lg bg-[#5C8BD9] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#4a7ac8] disabled:opacity-50"
         >
           {saving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -332,10 +498,14 @@ export default function AdminHomepagePage() {
         <button
           type="button"
           onClick={() => {
-            setHeroText(DEFAULT_HERO_TEXT)
+            setHeroText(DEFAULTS.heroText)
             setHeroImage('')
             setPreviewImage(null)
             setTheme('light')
+            setPlatformName(DEFAULTS.platformName)
+            setPlatformLogo('')
+            setPlatformFavicon('')
+            setBrandColor(DEFAULTS.brandColor)
           }}
           className="text-sm text-gray-500 hover:text-gray-700"
         >
