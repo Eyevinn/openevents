@@ -22,7 +22,6 @@ const DEFAULTS = {
   platformFavicon: '',
   brandColor: '#5C8BD9',
   footerTagline: 'Organizing events starts here',
-  footerShowOrganizerLogin: true,
 }
 
 export default function AdminCustomizationPage() {
@@ -40,7 +39,6 @@ export default function AdminCustomizationPage() {
   const [brandColor, setBrandColor] = useState(DEFAULTS.brandColor)
   const [footerTagline, setFooterTagline] = useState(DEFAULTS.footerTagline)
   const [footerLinks, setFooterLinks] = useState<FooterLink[]>(DEFAULT_FOOTER_LINKS)
-  const [footerShowOrganizerLogin, setFooterShowOrganizerLogin] = useState(true)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -61,8 +59,12 @@ export default function AdminCustomizationPage() {
           setPlatformFavicon(data.platformFavicon || '')
           setBrandColor(data.brandColor || DEFAULTS.brandColor)
           setFooterTagline(data.footerTagline ?? DEFAULTS.footerTagline)
-          if (data.footerLinks) setFooterLinks(data.footerLinks)
-          setFooterShowOrganizerLogin(data.footerShowOrganizerLogin !== false)
+          if (data.footerLinks && Array.isArray(data.footerLinks)) {
+            // Ensure defaults are always present at the start, then append custom links
+            const defaultHrefs = new Set(DEFAULT_FOOTER_LINKS.map(l => l.href))
+            const customLinks = data.footerLinks.filter((l: FooterLink) => !defaultHrefs.has(l.href))
+            setFooterLinks([...DEFAULT_FOOTER_LINKS, ...customLinks])
+          }
         }
       } catch {
         // Use defaults on error
@@ -162,7 +164,6 @@ export default function AdminCustomizationPage() {
           brandColor,
           footerTagline,
           footerLinks: footerLinks.filter(l => l.label.trim() && l.href.trim()),
-          footerShowOrganizerLogin,
         }),
       })
 
@@ -483,80 +484,91 @@ export default function AdminCustomizationPage() {
         <div>
           <label className="block text-sm font-medium text-gray-700">Footer Links</label>
           <p className="mt-1 text-xs text-gray-500">
-            Customize the navigation links shown in the footer.
+            The default links are required and cannot be removed. You can add up to 3 additional links.
           </p>
           <div className="mt-3 space-y-3">
-            {footerLinks.map((link, index) => (
-              <div key={index} className="flex items-center gap-2">
+            {/* Default links — read-only, not removable */}
+            {DEFAULT_FOOTER_LINKS.map((link) => (
+              <div key={link.href} className="flex items-center gap-2">
                 <input
                   type="text"
                   value={link.label}
-                  onChange={(e) => {
-                    const updated = [...footerLinks]
-                    updated[index] = { ...updated[index], label: e.target.value }
-                    setFooterLinks(updated)
-                  }}
-                  placeholder="Label"
-                  className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+                  disabled
+                  className="w-40 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
                 />
                 <input
                   type="text"
                   value={link.href}
-                  onChange={(e) => {
-                    const updated = [...footerLinks]
-                    updated[index] = { ...updated[index], href: e.target.value }
-                    setFooterLinks(updated)
-                  }}
-                  placeholder="/page or https://..."
-                  className="flex-1 max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+                  disabled
+                  className="flex-1 max-w-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
                 />
-                <label className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <input
-                    type="checkbox"
-                    checked={link.external ?? false}
-                    onChange={(e) => {
-                      const updated = [...footerLinks]
-                      updated[index] = { ...updated[index], external: e.target.checked }
-                      setFooterLinks(updated)
-                    }}
-                    className="rounded border-gray-300"
-                  />
-                  External
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setFooterLinks(footerLinks.filter((_, i) => i !== index))}
-                  className="rounded p-1 text-gray-400 hover:text-red-600 transition"
-                  aria-label="Remove link"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <span className="w-[72px]" />
+                <span className="w-6" />
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => setFooterLinks([...footerLinks, { label: '', href: '' }])}
-              className="text-sm font-medium text-[#5C8BD9] hover:text-[#4a7ac8]"
-            >
-              + Add link
-            </button>
-          </div>
-        </div>
 
-        {/* Show Organizer Login */}
-        <div>
-          <label className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={footerShowOrganizerLogin}
-              onChange={(e) => setFooterShowOrganizerLogin(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-[#5C8BD9] focus:ring-[#5C8BD9]"
-            />
-            <div>
-              <span className="text-sm font-medium text-gray-700">Show &quot;Organizer Login&quot; link</span>
-              <p className="text-xs text-gray-500">Displays a login link in the footer for unauthenticated visitors.</p>
-            </div>
-          </label>
+            {/* Custom links — editable and removable */}
+            {footerLinks.slice(DEFAULT_FOOTER_LINKS.length).map((link, i) => {
+              const index = DEFAULT_FOOTER_LINKS.length + i
+              return (
+                <div key={index} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={link.label}
+                    onChange={(e) => {
+                      const updated = [...footerLinks]
+                      updated[index] = { ...updated[index], label: e.target.value }
+                      setFooterLinks(updated)
+                    }}
+                    placeholder="Label"
+                    className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+                  />
+                  <input
+                    type="text"
+                    value={link.href}
+                    onChange={(e) => {
+                      const updated = [...footerLinks]
+                      updated[index] = { ...updated[index], href: e.target.value }
+                      setFooterLinks(updated)
+                    }}
+                    placeholder="/page or https://..."
+                    className="flex-1 max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-[#5C8BD9] focus:outline-none focus:ring-1 focus:ring-[#5C8BD9]"
+                  />
+                  <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                    <input
+                      type="checkbox"
+                      checked={link.external ?? false}
+                      onChange={(e) => {
+                        const updated = [...footerLinks]
+                        updated[index] = { ...updated[index], external: e.target.checked }
+                        setFooterLinks(updated)
+                      }}
+                      className="rounded border-gray-300"
+                    />
+                    External
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setFooterLinks(footerLinks.filter((_, idx) => idx !== index))}
+                    className="rounded p-1 text-gray-400 hover:text-red-600 transition"
+                    aria-label="Remove link"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )
+            })}
+
+            {footerLinks.length < DEFAULT_FOOTER_LINKS.length + 3 && (
+              <button
+                type="button"
+                onClick={() => setFooterLinks([...footerLinks, { label: '', href: '', external: false }])}
+                className="text-sm font-medium text-[#5C8BD9] hover:text-[#4a7ac8]"
+              >
+                + Add link ({3 - (footerLinks.length - DEFAULT_FOOTER_LINKS.length)} remaining)
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -634,7 +646,6 @@ export default function AdminCustomizationPage() {
             setBrandColor(DEFAULTS.brandColor)
             setFooterTagline(DEFAULTS.footerTagline)
             setFooterLinks(DEFAULT_FOOTER_LINKS)
-            setFooterShowOrganizerLogin(true)
           }}
           className="text-sm text-gray-500 hover:text-gray-700"
         >

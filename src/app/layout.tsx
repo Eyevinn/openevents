@@ -72,7 +72,6 @@ export default async function RootLayout({
     platform_favicon: '',
     footer_tagline: 'Organizing events starts here',
     footer_links: '',
-    footer_show_organizer_login: 'true',
   })
 
   const theme = settings.platform_theme
@@ -107,7 +106,6 @@ export default async function RootLayout({
               platformName={settings.platform_name}
               tagline={settings.footer_tagline}
               links={settings.footer_links ? JSON.parse(settings.footer_links) : undefined}
-              showOrganizerLoginLink={settings.footer_show_organizer_login !== 'false'}
             />
           </div>
         </Providers>

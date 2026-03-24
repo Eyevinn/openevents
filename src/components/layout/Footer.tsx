@@ -13,7 +13,6 @@ type FooterProps = {
   platformName?: string
   tagline?: string
   links?: FooterLink[]
-  showOrganizerLoginLink?: boolean
 }
 
 const DEFAULT_LINKS: FooterLink[] = [
@@ -27,10 +26,9 @@ export function Footer({
   platformName = 'OpenEvents',
   tagline = 'Organizing events starts here',
   links,
-  showOrganizerLoginLink = true,
 }: FooterProps) {
   const { status } = useSession()
-  const showLogin = showOrganizerLoginLink && status === 'unauthenticated'
+  const showLogin = status === 'unauthenticated'
   const footerLinks = links ?? DEFAULT_LINKS
 
   return (
