@@ -39,6 +39,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
           maxUses: true,
           usedCount: true,
           isActive: true,
+          applyToWholeOrder: true,
         },
       },
     },
@@ -63,6 +64,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
     const maxUsesRaw = String(formData.get('maxUses') || '').trim()
     const maxUses = maxUsesRaw ? Number(maxUsesRaw) : null
     const isActive = String(formData.get('isActive') || 'true') === 'true'
+    const applyToWholeOrder = formData.get('applyToWholeOrder') === 'on'
 
     await prisma.discountCode.create({
       data: {
@@ -72,6 +74,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
         discountValue,
         maxUses,
         isActive,
+        applyToWholeOrder,
       },
     })
 
@@ -104,6 +107,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
     const maxUsesRaw = String(formData.get('maxUses') || '').trim()
     const maxUses = maxUsesRaw ? Number(maxUsesRaw) : null
     const isActive = String(formData.get('isActive') || 'true') === 'true'
+    const applyToWholeOrder = formData.get('applyToWholeOrder') === 'on'
 
     await prisma.discountCode.update({
       where: { id: existing.id },
@@ -113,6 +117,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
         discountValue,
         maxUses,
         isActive,
+        applyToWholeOrder,
       },
     })
 
@@ -165,6 +170,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
                   discountValue: Number(editableDiscountCode.discountValue.toString()),
                   maxUses: editableDiscountCode.maxUses,
                   isActive: editableDiscountCode.isActive,
+                  applyToWholeOrder: editableDiscountCode.applyToWholeOrder,
                 }
               : undefined
           }

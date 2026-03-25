@@ -10,6 +10,7 @@ export interface AppliedDiscount {
   discountType: 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_TICKET' | 'INVOICE'
   discountValue: number
   applicableTicketTypeIds: string[]
+  applyToWholeOrder: boolean
 }
 
 interface DiscountCodeInputProps {

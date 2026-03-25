@@ -17,6 +17,7 @@ type DiscountCodeFormProps = {
     discountValue: number
     maxUses: number | null
     isActive: boolean
+    applyToWholeOrder: boolean
   }
 }
 
@@ -85,6 +86,18 @@ export function DiscountCodeForm({ title, submitLabel, action, initial }: Discou
             <option value="false">Inactive</option>
           </select>
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id={`${title}-applyToWholeOrder`}
+          name="applyToWholeOrder"
+          defaultChecked={initial?.applyToWholeOrder ?? false}
+          className="h-4 w-4 rounded border-gray-300"
+        />
+        <Label htmlFor={`${title}-applyToWholeOrder`}>
+          Apply discount to entire order (by default, applies to 1 ticket only)
+        </Label>
       </div>
       <Button type="submit">{submitLabel}</Button>
     </form>

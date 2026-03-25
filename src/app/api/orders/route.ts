@@ -257,11 +257,13 @@ export async function POST(request: NextRequest) {
               }
 
               if (!promoCodeError) {
-                discountUsageUnits = getDiscountUsageUnitsFromItems(
-                  preparedOrder.items.filter((item) =>
-                    appliesToAll ? true : discountApplicableTicketTypeIds.includes(item.ticketTypeId)
-                  )
-                )
+                discountUsageUnits = foundDiscountCode.applyToWholeOrder
+                  ? getDiscountUsageUnitsFromItems(
+                      preparedOrder.items.filter((item) =>
+                        appliesToAll ? true : discountApplicableTicketTypeIds.includes(item.ticketTypeId)
+                      )
+                    )
+                  : 1 // Single-ticket discount uses 1 unit
 
                 if (foundDiscountCode.maxUses !== null) {
                   const remainingUses = getDiscountCodeRemainingTicketUses(foundDiscountCode) ?? 0
@@ -273,12 +275,19 @@ export async function POST(request: NextRequest) {
 
               if (!promoCodeError) {
                 // Calculate promo code discount amount
-                const discountableSubtotal = preparedOrder.items.reduce((sum, item) => {
-                  if (appliesToAll || discountApplicableTicketTypeIds.includes(item.ticketTypeId)) {
-                    return Number((sum + item.totalPrice).toFixed(2))
-                  }
-                  return sum
-                }, 0)
+                const applicableItems = preparedOrder.items.filter((item) =>
+                  appliesToAll || discountApplicableTicketTypeIds.includes(item.ticketTypeId)
+                )
+
+                let discountableSubtotal: number
+                if (foundDiscountCode.applyToWholeOrder) {
+                  discountableSubtotal = applicableItems.reduce((sum, item) =>
+                    Number((sum + item.totalPrice).toFixed(2)), 0)
+                } else {
+                  // Apply to 1 ticket only — use the most expensive applicable unit price
+                  const maxUnitPrice = Math.max(0, ...applicableItems.map((item) => item.unitPrice))
+                  discountableSubtotal = maxUnitPrice
+                }
 
                 if (foundDiscountCode.minCartAmount !== null) {
                   const minQuantity = decimalToNumber(foundDiscountCode.minCartAmount)
