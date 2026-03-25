@@ -7,10 +7,15 @@ export async function getPlatformSetting(
   key: string,
   defaultValue: string = ''
 ): Promise<string> {
-  const setting = await prisma.platformSetting.findUnique({
-    where: { key },
-  })
-  return setting?.value ?? defaultValue
+  try {
+    const setting = await prisma.platformSetting.findUnique({
+      where: { key },
+    })
+    return setting?.value ?? defaultValue
+  } catch {
+    // Database unavailable (e.g., build time on OSC) — return default
+    return defaultValue
+  }
 }
 
 /**
@@ -20,15 +25,20 @@ export async function getPlatformSetting(
 export async function getPlatformSettings(
   keys: Record<string, string>
 ): Promise<Record<string, string>> {
-  const settings = await prisma.platformSetting.findMany({
-    where: { key: { in: Object.keys(keys) } },
-  })
+  try {
+    const settings = await prisma.platformSetting.findMany({
+      where: { key: { in: Object.keys(keys) } },
+    })
 
-  const result: Record<string, string> = { ...keys }
-  for (const setting of settings) {
-    result[setting.key] = setting.value
+    const result: Record<string, string> = { ...keys }
+    for (const setting of settings) {
+      result[setting.key] = setting.value
+    }
+    return result
+  } catch {
+    // Database unavailable (e.g., build time on OSC) — return defaults
+    return { ...keys }
   }
-  return result
 }
 
 /**
