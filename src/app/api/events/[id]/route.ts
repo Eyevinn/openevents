@@ -121,6 +121,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           coverImage: input.coverImage,
           visibility: input.visibility,
           cancellationDeadlineHours: input.cancellationDeadlineHours,
+          collectAllergies: input.collectAllergies ?? undefined,
           status,
           publishedAt:
             status === 'PUBLISHED'

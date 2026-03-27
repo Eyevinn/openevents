@@ -196,6 +196,7 @@ model Event {
 
   // Settings
   cancellationDeadlineHours Int @default(48) // Hours before event
+  collectAllergies          Boolean @default(false) // Show allergy field in checkout attendee form
 
   // Timestamps
   createdAt       DateTime     @default(now())
@@ -530,6 +531,7 @@ model Ticket {
   attendeeEmail        String?
   attendeeTitle        String?
   attendeeOrganization String?
+  attendeeAllergies    String?
 
   status       TicketStatus @default(ACTIVE)
   checkedInAt  DateTime?

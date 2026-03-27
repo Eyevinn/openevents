@@ -30,6 +30,7 @@ interface CheckoutFormProps {
     slug: string
     title: string
     country: string | null
+    collectAllergies: boolean
   }
   groupDiscounts?: GroupDiscount[]
 }
@@ -66,10 +67,11 @@ interface AttendeeFormState {
   email: string
   title: string
   organization: string
+  allergies: string
 }
 
 function emptyAttendee(): AttendeeFormState {
-  return { firstName: '', lastName: '', email: '', title: '', organization: '' }
+  return { firstName: '', lastName: '', email: '', title: '', organization: '', allergies: '' }
 }
 
 function calculateBestGroupDiscount(
@@ -1103,6 +1105,21 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
                                 }
                               />
                             </div>
+                            {event.collectAllergies && (
+                              <div className="space-y-1 sm:col-span-2">
+                                <Label htmlFor={`attendee-${item.ticketTypeId}-${i}-allergies`}>
+                                  Allergies / Dietary requirements
+                                </Label>
+                                <Input
+                                  id={`attendee-${item.ticketTypeId}-${i}-allergies`}
+                                  value={attendeeDisplay.allergies}
+                                  onChange={(e) =>
+                                    updateAttendeeField(item.ticketTypeId, i, 'allergies', e.target.value)
+                                  }
+                                  placeholder="e.g. Gluten-free, nut allergy"
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       )

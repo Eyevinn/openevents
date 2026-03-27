@@ -121,6 +121,7 @@ export async function POST(request: NextRequest) {
           : undefined,
         visibility: input.visibility,
         cancellationDeadlineHours: input.cancellationDeadlineHours,
+        collectAllergies: input.collectAllergies ?? false,
         status: 'DRAFT',
         ticketTypes: autoCreateFreeTicket
           ? {

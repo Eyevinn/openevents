@@ -60,7 +60,6 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
         where: {
           eventId,
           status: { in: revenueStatuses },
-          paymentMethod: 'PAYPAL',
           OR: [
             { paidAt: { gte: thirtyDaysAgo } },
             { paidAt: null, createdAt: { gte: thirtyDaysAgo } },
@@ -68,6 +67,7 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
         },
         select: {
           totalAmount: true,
+          paymentMethod: true,
           createdAt: true,
           paidAt: true,
           items: { select: { quantity: true } },
@@ -89,7 +89,7 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
     return {
       id: tt.id,
       name: tt.name,
-      sold: s?._sum?.quantity ?? 0,
+      sold: tt.soldCount,
       revenue: Number(s?._sum?.totalPrice?.toString() ?? '0'),
       remaining:
         tt.maxCapacity === null ? null : Math.max(tt.maxCapacity - tt.soldCount, 0),
@@ -111,7 +111,9 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
     const dayStats = dailyMap.get(day)
     if (dayStats) {
       const orderTickets = o.items.reduce((sum, item) => sum + item.quantity, 0)
-      dayStats.revenue += Number(o.totalAmount.toString())
+      if (o.paymentMethod === 'PAYPAL') {
+        dayStats.revenue += Number(o.totalAmount.toString())
+      }
       dayStats.ticketsSold += orderTickets
     }
   }

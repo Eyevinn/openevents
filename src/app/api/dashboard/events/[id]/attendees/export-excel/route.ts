@@ -55,6 +55,7 @@ export async function GET(request: Request, context: RouteContext) {
         attendeeEmail: true,
         attendeeTitle: true,
         attendeeOrganization: true,
+        attendeeAllergies: true,
         status: true,
         checkedInAt: true,
         ticketType: {
@@ -116,6 +117,7 @@ export async function GET(request: Request, context: RouteContext) {
       { header: 'Seating location 2', key: 'seating2', width: 18 },
       { header: 'Seating location 3', key: 'seating3', width: 18 },
       { header: 'Barcode number', key: 'barcodeNumber', width: 28 },
+      { header: 'Allergies / Dietary', key: 'allergies', width: 30 },
       { header: 'Scanned in', key: 'scannedIn', width: 14 },
       { header: 'Guest', key: 'guest', width: 8 },
     ]
@@ -165,6 +167,7 @@ export async function GET(request: Request, context: RouteContext) {
         seating1: '',
         seating2: '',
         seating3: '',
+        allergies: ticket.attendeeAllergies || '',
         barcodeNumber: ticket.ticketCode,
         scannedIn: ticket.checkedInAt || ticket.status === 'USED' ? 'Yes' : 'No',
         guest: 'No',

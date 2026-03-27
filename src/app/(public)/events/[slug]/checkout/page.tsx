@@ -30,6 +30,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
       country: true,
       onlineUrl: true,
       coverImage: true,
+      collectAllergies: true,
       status: true,
       ticketTypes: {
         where: { isVisible: true },
@@ -105,6 +106,7 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
           slug: event.slug,
           title: event.title,
           country: event.country,
+          collectAllergies: event.collectAllergies,
         }}
         groupDiscounts={event.groupDiscounts.map((gd) => ({
           id: gd.id,

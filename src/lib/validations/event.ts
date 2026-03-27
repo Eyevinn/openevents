@@ -22,6 +22,7 @@ const eventSchemaBase = z.object({
   bottomImage: z.string().url().optional().nullable(),
   visibility: z.enum(['PUBLIC', 'PRIVATE']).default('PUBLIC'),
   cancellationDeadlineHours: z.number().min(0).default(48),
+  collectAllergies: z.boolean().optional().default(false),
   speakerNames: z.array(z.string()).optional(),
   organizerNames: z.array(z.string()).optional(),
   sponsorNames: z.array(z.string()).optional(),

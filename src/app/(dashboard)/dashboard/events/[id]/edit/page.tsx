@@ -145,6 +145,7 @@ export default async function EditEventPage({ params }: PageProps) {
           bottomImage,
           visibility: event.visibility,
           cancellationDeadlineHours: event.cancellationDeadlineHours,
+          collectAllergies: event.collectAllergies,
         }}
       />
     </div>

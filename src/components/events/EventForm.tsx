@@ -108,6 +108,7 @@ type EventFormData = {
   sponsorNames?: string;
   visibility: "PUBLIC" | "PRIVATE";
   cancellationDeadlineHours: number;
+  collectAllergies: boolean;
 };
 
 type InitialSpeaker = {
@@ -336,6 +337,7 @@ const fallbackInitialData: EventFormData = {
   sponsorNames: "",
   visibility: "PUBLIC",
   cancellationDeadlineHours: 48,
+  collectAllergies: false,
 };
 
 const allowedImageMimeTypes = new Set([
@@ -787,6 +789,7 @@ function buildSnapshot(form: EventFormData) {
     sponsorNames: form.sponsorNames || "",
     visibility: form.visibility,
     cancellationDeadlineHours: form.cancellationDeadlineHours,
+    collectAllergies: form.collectAllergies,
     coverImage: form.coverImage || "",
     bottomImage: form.bottomImage || "",
   });
@@ -4359,6 +4362,18 @@ export function EventForm({
             Add Ticket
           </button>
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={form.collectAllergies}
+            onChange={(e) =>
+              setForm((prev) => ({ ...prev, collectAllergies: e.target.checked }))
+            }
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          Collect allergy information from attendees during checkout
+        </label>
 
         {(form.ticketTypes || []).length < 1 ? (
           <div className="w-full pt-8 pb-2">
