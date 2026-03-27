@@ -38,7 +38,7 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
         select: { status: true },
       }),
       prisma.order.aggregate({
-        where: { eventId, status: { in: revenueStatuses }, paymentMethod: { not: 'INVOICE' } },
+        where: { eventId, status: { in: revenueStatuses }, paymentMethod: 'PAYPAL' },
         _sum: { totalAmount: true },
       }),
       prisma.order.aggregate({
@@ -48,7 +48,7 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
       prisma.orderItem.groupBy({
         by: ['ticketTypeId'],
         orderBy: { ticketTypeId: 'asc' },
-        where: { order: { eventId, status: { in: revenueStatuses }, paymentMethod: { not: 'INVOICE' } } },
+        where: { order: { eventId, status: { in: revenueStatuses }, paymentMethod: 'PAYPAL' } },
         _sum: { quantity: true, totalPrice: true },
       }),
       prisma.ticketType.findMany({
@@ -60,7 +60,7 @@ async function fetchEventAnalytics(eventId: string): Promise<EventAnalytics> {
         where: {
           eventId,
           status: { in: revenueStatuses },
-          paymentMethod: { not: 'INVOICE' },
+          paymentMethod: 'PAYPAL',
           OR: [
             { paidAt: { gte: thirtyDaysAgo } },
             { paidAt: null, createdAt: { gte: thirtyDaysAgo } },

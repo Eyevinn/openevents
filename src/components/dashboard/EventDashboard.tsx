@@ -72,6 +72,7 @@ export function EventDashboard({ event, stats }: EventDashboardProps) {
           <p className="mt-2 text-2xl font-semibold text-gray-900">
             {formatCurrency(stats.totalRevenue)}
           </p>
+          <p className="mt-1 text-xs text-gray-400">Excluding invoice and free orders</p>
         </div>
 
         <div className="h-full rounded-xl border border-gray-200 bg-white p-5">

@@ -27,7 +27,7 @@ async function fetchDashboardAnalytics(): Promise<DashboardAnalytics> {
       where: {
         event: eventWhere,
         status: { in: revenueStatuses },
-        paymentMethod: { not: 'INVOICE' },
+        paymentMethod: 'PAYPAL',
       },
       _sum: { totalAmount: true },
       orderBy: { _sum: { totalAmount: 'desc' } },
@@ -37,7 +37,7 @@ async function fetchDashboardAnalytics(): Promise<DashboardAnalytics> {
       where: {
         event: eventWhere,
         status: { in: revenueStatuses },
-        paymentMethod: { not: 'INVOICE' },
+        paymentMethod: 'PAYPAL',
         OR: [
           { paidAt: { gte: thirtyDaysAgo } },
           { paidAt: null, createdAt: { gte: thirtyDaysAgo } },
@@ -66,7 +66,7 @@ async function fetchDashboardAnalytics(): Promise<DashboardAnalytics> {
         }),
         prisma.orderItem.findMany({
           where: {
-            order: { eventId: { in: topEventIds }, status: { in: revenueStatuses }, paymentMethod: { not: 'INVOICE' } },
+            order: { eventId: { in: topEventIds }, status: { in: revenueStatuses }, paymentMethod: 'PAYPAL' },
           },
           select: { quantity: true, ticketType: { select: { eventId: true } } },
         }),

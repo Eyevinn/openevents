@@ -34,7 +34,7 @@ export async function GET() {
           status: {
             in: revenueStatuses,
           },
-          paymentMethod: { not: 'INVOICE' },
+          paymentMethod: 'PAYPAL',
         },
         _sum: {
           totalAmount: true,
@@ -50,7 +50,7 @@ export async function GET() {
           status: {
             in: revenueStatuses,
           },
-          paymentMethod: { not: 'INVOICE' },
+          paymentMethod: 'PAYPAL',
         },
         _sum: {
           totalAmount: true,

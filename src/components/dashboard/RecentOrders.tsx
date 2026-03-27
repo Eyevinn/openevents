@@ -44,6 +44,9 @@ export function RecentOrders({ orders }: RecentOrdersProps) {
                 {order.paymentMethod === 'INVOICE' && (
                   <span className="ml-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Invoice</span>
                 )}
+                {order.paymentMethod === 'FREE' && (
+                  <span className="ml-1 inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">Free order</span>
+                )}
                 {' · '}{formatDateTime(order.createdAt)}
               </p>
             </div>

@@ -43,7 +43,7 @@ export async function GET(_request: Request, context: RouteContext) {
         where: {
           eventId: id,
           status: { in: revenueStatuses },
-          paymentMethod: { not: 'INVOICE' },
+          paymentMethod: 'PAYPAL',
         },
         _sum: {
           totalAmount: true,
@@ -58,7 +58,7 @@ export async function GET(_request: Request, context: RouteContext) {
           order: {
             eventId: id,
             status: { in: revenueStatuses },
-            paymentMethod: { not: 'INVOICE' },
+            paymentMethod: 'PAYPAL',
           },
         },
         _sum: {
