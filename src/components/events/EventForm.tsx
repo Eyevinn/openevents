@@ -51,6 +51,7 @@ type TicketTypeFieldErrors = Partial<Record<TicketTypeFieldKey, string>>;
 type PromoCodeDraft = {
   id?: string;
   code: string;
+  discountType: "PERCENTAGE" | "FIXED_AMOUNT" | "FREE_TICKET" | "INVOICE";
   discountValue: string;
   ticketTypeId: string;
   maxUses: string;
@@ -194,6 +195,7 @@ function buildPromoCodeSnapshot(promoCode: PromoCodeDraft) {
   return {
     id: promoCode.id || "",
     code: promoCode.code.trim().toUpperCase(),
+    discountType: promoCode.discountType,
     discountValue: promoCode.discountValue.trim(),
     ticketTypeId: promoCode.ticketTypeId || "",
     maxUses: promoCode.maxUses.trim(),
@@ -1504,6 +1506,7 @@ export function EventForm({
       ...current,
       {
         code: "",
+        discountType: "PERCENTAGE",
         discountValue: "",
         ticketTypeId: "",
         maxUses: "",
@@ -2277,12 +2280,9 @@ export function EventForm({
       if (!resolvedTicketTypeId || resolvedTicketTypeId.startsWith("ticket-"))
         continue;
 
-      const discountValue = Number(promoCode.discountValue);
-      if (
-        Number.isNaN(discountValue) ||
-        discountValue <= 0 ||
-        discountValue > 100
-      )
+      const needsValue = promoCode.discountType === "PERCENTAGE" || promoCode.discountType === "FIXED_AMOUNT";
+      const discountValue = needsValue ? Number(promoCode.discountValue) : 0;
+      if (needsValue && (Number.isNaN(discountValue) || discountValue <= 0 || discountValue > 100))
         continue;
 
       const maxUsesRaw = promoCode.maxUses.trim();
@@ -2294,7 +2294,7 @@ export function EventForm({
 
       const payload = {
         code: promoCode.code.trim().toUpperCase(),
-        discountType: "PERCENTAGE",
+        discountType: promoCode.discountType,
         discountValue,
         maxUses,
         minCartAmount,
@@ -2349,6 +2349,8 @@ export function EventForm({
         const matchesSavedDraft =
           buildPromoCodeSnapshot(promoCode).code ===
             buildPromoCodeSnapshot(originalPromoCode).code &&
+          buildPromoCodeSnapshot(promoCode).discountType ===
+            buildPromoCodeSnapshot(originalPromoCode).discountType &&
           buildPromoCodeSnapshot(promoCode).discountValue ===
             buildPromoCodeSnapshot(originalPromoCode).discountValue &&
           buildPromoCodeSnapshot(promoCode).ticketTypeId ===
@@ -4663,8 +4665,8 @@ export function EventForm({
                     </button>
                   </div>
 
-                  {/* Row 1: Promo Code Name | Discount % */}
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {/* Row 1: Promo Code Name | Type | Discount Value */}
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <div className="flex flex-col gap-1">
                       <label
                         className="text-sm font-medium text-[#4a5565]"
@@ -4689,23 +4691,49 @@ export function EventForm({
                     <div className="flex flex-col gap-1">
                       <label
                         className="text-sm font-medium text-[#4a5565]"
-                        htmlFor={`promoDiscount-${index}`}
+                        htmlFor={`promoType-${index}`}
                       >
-                        Discount %
+                        Type
                       </label>
-                      <input
-                        id={`promoDiscount-${index}`}
-                        type="text"
-                        inputMode="numeric"
-                        value={promoCode.discountValue}
-                        placeholder="e.g., 20"
-                        className="h-[42px] w-full rounded-[10px] border border-[#d1d5dc] bg-white px-4 text-base outline-none focus:border-[#5c8bd9] focus:ring-1 focus:ring-[#5c8bd9]"
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, "");
-                          updatePromoCodeField(index, "discountValue", val);
-                        }}
-                      />
+                      <div className="relative">
+                        <select
+                          id={`promoType-${index}`}
+                          value={promoCode.discountType}
+                          className="h-[42px] w-full appearance-none rounded-[10px] border border-[#d1d5dc] bg-white px-4 pr-10 text-base outline-none focus:border-[#5c8bd9] focus:ring-1 focus:ring-[#5c8bd9]"
+                          onChange={(e) =>
+                            updatePromoCodeField(index, "discountType", e.target.value)
+                          }
+                        >
+                          <option value="PERCENTAGE">Percentage</option>
+                          <option value="FIXED_AMOUNT">Fixed Amount</option>
+                          <option value="FREE_TICKET">Free Ticket</option>
+                          <option value="INVOICE">Invoice</option>
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
+                      </div>
                     </div>
+                    {(promoCode.discountType === "PERCENTAGE" || promoCode.discountType === "FIXED_AMOUNT") && (
+                      <div className="flex flex-col gap-1">
+                        <label
+                          className="text-sm font-medium text-[#4a5565]"
+                          htmlFor={`promoDiscount-${index}`}
+                        >
+                          {promoCode.discountType === "PERCENTAGE" ? "Discount %" : "Discount Amount"}
+                        </label>
+                        <input
+                          id={`promoDiscount-${index}`}
+                          type="text"
+                          inputMode="numeric"
+                          value={promoCode.discountValue}
+                          placeholder={promoCode.discountType === "PERCENTAGE" ? "e.g., 20" : "e.g., 100"}
+                          className="h-[42px] w-full rounded-[10px] border border-[#d1d5dc] bg-white px-4 text-base outline-none focus:border-[#5c8bd9] focus:ring-1 focus:ring-[#5c8bd9]"
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            updatePromoCodeField(index, "discountValue", val);
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Row 2: Ticket Type | Usage Limit */}

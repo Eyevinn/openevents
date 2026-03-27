@@ -412,17 +412,35 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
     [subtotal, discount, selectedItems]
   )
 
-  // Apply the best discount: group discount vs promo code
-  const discountAmount = useMemo(
-    () => Math.max(groupDiscount.amount, promoCodeDiscountAmount),
-    [groupDiscount.amount, promoCodeDiscountAmount]
-  )
+  const isInvoiceCode = discount?.discountType === 'INVOICE'
+  const isFreeNonInvoiceCode = discount && !isInvoiceCode &&
+    (discount.discountType === 'FREE_TICKET' ||
+     (discount.discountType === 'PERCENTAGE' && discount.discountValue >= 100))
+
+  // Apply discounts based on discount code type
+  const discountAmount = useMemo(() => {
+    if (isInvoiceCode) {
+      // Invoice codes stack with group discounts: apply group discount for price
+      return groupDiscount.amount
+    }
+    if (isFreeNonInvoiceCode) {
+      // Non-invoice 100% off: order is free, ignore group discount
+      return promoCodeDiscountAmount
+    }
+    // Regular: best discount wins
+    return Math.max(groupDiscount.amount, promoCodeDiscountAmount)
+  }, [groupDiscount.amount, promoCodeDiscountAmount, isInvoiceCode, isFreeNonInvoiceCode])
 
   const appliedDiscountType = useMemo(() => {
+    if (isInvoiceCode) {
+      // Invoice codes: show group discount info if available, otherwise no discount line
+      return groupDiscount.amount > 0 ? 'group' : null
+    }
+    if (isFreeNonInvoiceCode) return 'free'
     if (discountAmount === 0) return null
     if (groupDiscount.amount > promoCodeDiscountAmount) return 'group'
     return 'promo'
-  }, [discountAmount, groupDiscount.amount, promoCodeDiscountAmount])
+  }, [discountAmount, groupDiscount.amount, promoCodeDiscountAmount, isInvoiceCode, isFreeNonInvoiceCode])
 
   const totalAmount = useMemo(
     () => Number(Math.max(0, subtotal - discountAmount).toFixed(2)),
@@ -1121,8 +1139,9 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
           includedVat={includedVat}
           vatRate={vatRate}
           currency={selectedItems[0]?.currency ?? 'SEK'}
-          discountCode={discount?.code}
+          discountCode={appliedDiscountType === 'promo' ? discount?.code : undefined}
           groupDiscountMessage={appliedDiscountType === 'group' ? groupDiscount.description : null}
+          freeOrderMessage={appliedDiscountType === 'free' ? 'Discount code applied, this order is free' : null}
         />
 
         <Card>

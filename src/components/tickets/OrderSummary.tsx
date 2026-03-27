@@ -22,6 +22,7 @@ interface OrderSummaryProps {
   currency: string
   discountCode?: string | null
   groupDiscountMessage?: string | null
+  freeOrderMessage?: string | null
 }
 
 export function OrderSummary({
@@ -34,6 +35,7 @@ export function OrderSummary({
   currency,
   discountCode,
   groupDiscountMessage,
+  freeOrderMessage,
 }: OrderSummaryProps) {
   return (
     <Card>
@@ -67,7 +69,13 @@ export function OrderSummary({
             <span>{formatCurrency(subtotal, currency)}</span>
           </div>
 
-          {discountAmount > 0 && (
+          {freeOrderMessage && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-green-700">{freeOrderMessage}</p>
+            </div>
+          )}
+
+          {!freeOrderMessage && discountAmount > 0 && (
             <div className="space-y-1">
               <div className="flex items-center justify-between text-green-700">
                 <span>

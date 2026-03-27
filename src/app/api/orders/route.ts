@@ -361,14 +361,30 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Apply the best discount: whichever saves the customer more
+        // Apply discounts based on discount code type
         const subtotal = preparedOrder.subtotal
         let discountAmount = 0
         let appliedGroupDiscountId: string | null = null
         let appliedDiscountCodeId: string | null = null
         let promoCodeIgnoredForGroupDiscount = false
 
-        if (groupDiscountAmount > promoCodeDiscountAmount) {
+        const isInvoiceCode = discountCodeRecord?.discountType === 'INVOICE'
+        const isFreeNonInvoiceCode = discountCodeRecord && !isInvoiceCode &&
+          (discountCodeRecord.discountType === 'FREE_TICKET' ||
+           (discountCodeRecord.discountType === 'PERCENTAGE' && decimalToNumber(discountCodeRecord.discountValue) >= 100))
+
+        if (isInvoiceCode) {
+          // Invoice codes stack with group discounts: apply group discount for price, invoice for payment method
+          discountAmount = groupDiscountAmount
+          appliedGroupDiscountId = groupDiscountRecord?.id ?? null
+          appliedDiscountCodeId = discountCodeRecord?.id ?? null
+          // Don't consume ticket-based usage for invoice codes (they only change payment method)
+          discountUsageUnits = 0
+        } else if (isFreeNonInvoiceCode) {
+          // Non-invoice 100% off codes: order is free, ignore group discount
+          discountAmount = promoCodeDiscountAmount
+          appliedDiscountCodeId = discountCodeRecord?.id ?? null
+        } else if (groupDiscountAmount > promoCodeDiscountAmount) {
           // Group discount wins
           discountAmount = groupDiscountAmount
           appliedGroupDiscountId = groupDiscountRecord?.id ?? null

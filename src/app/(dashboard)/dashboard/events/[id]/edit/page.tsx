@@ -100,6 +100,7 @@ export default async function EditEventPage({ params }: PageProps) {
         initialPromoCodes={event.discountCodes.map((dc) => ({
           id: dc.id,
           code: dc.code,
+          discountType: dc.discountType as 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_TICKET' | 'INVOICE',
           discountValue: Number(dc.discountValue).toString(),
           ticketTypeId: dc.ticketTypes[0]?.ticketTypeId ?? '',
           maxUses: dc.maxUses !== null ? String(dc.maxUses) : '',

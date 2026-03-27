@@ -284,12 +284,27 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Apply the best discount
+        // Apply discounts based on discount code type
         let discountAmount = 0
         let appliedDiscountCodeId: string | null = null
         let appliedGroupDiscountId: string | null = null
 
-        if (groupDiscountAmount > promoCodeDiscountAmount) {
+        const isInvoiceCode = discountCodeRecord?.discountType === 'INVOICE'
+        const isFreeNonInvoiceCode = discountCodeRecord && !isInvoiceCode &&
+          (discountCodeRecord.discountType === 'FREE_TICKET' ||
+           (discountCodeRecord.discountType === 'PERCENTAGE' && decimalToNumber(discountCodeRecord.discountValue) >= 100))
+
+        if (isInvoiceCode) {
+          // Invoice codes stack with group discounts
+          discountAmount = groupDiscountAmount
+          appliedGroupDiscountId = groupDiscountRecord?.id ?? null
+          appliedDiscountCodeId = discountCodeRecord?.id ?? null
+          discountUsageUnits = 0
+        } else if (isFreeNonInvoiceCode) {
+          // Non-invoice 100% off codes: order is free
+          discountAmount = promoCodeDiscountAmount
+          appliedDiscountCodeId = discountCodeRecord?.id ?? null
+        } else if (groupDiscountAmount > promoCodeDiscountAmount) {
           discountAmount = groupDiscountAmount
           appliedGroupDiscountId = groupDiscountRecord?.id ?? null
         } else if (promoCodeDiscountAmount > 0) {
