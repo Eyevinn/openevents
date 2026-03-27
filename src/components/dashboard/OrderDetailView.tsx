@@ -1,3 +1,5 @@
+'use client'
+
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { formatPaymentMethodLabel } from '@/lib/payments/labels'
@@ -32,9 +34,10 @@ type OrderDetailViewProps = {
   emailAction: (formData: FormData) => Promise<void>
   markPaidAction?: (formData: FormData) => Promise<void>
   markInvoiceSentAction?: (formData: FormData) => Promise<void>
+  deleteOrderAction?: (formData: FormData) => Promise<void>
 }
 
-export function OrderDetailView({ order, refundAction, emailAction, markPaidAction, markInvoiceSentAction }: OrderDetailViewProps) {
+export function OrderDetailView({ order, refundAction, emailAction, markPaidAction, markInvoiceSentAction, deleteOrderAction }: OrderDetailViewProps) {
   const isPendingInvoice = order.status === 'PENDING_INVOICE'
   const showMarkInvoiceSent = isPendingInvoice && !order.invoiceSentAt && markInvoiceSentAction
   return (
@@ -118,8 +121,29 @@ export function OrderDetailView({ order, refundAction, emailAction, markPaidActi
             <input type="hidden" name="orderId" value={order.id} />
             <Button type="submit">Send Email to Buyer</Button>
           </form>
+          {deleteOrderAction && (
+            <DeleteOrderButton orderId={order.id} action={deleteOrderAction} />
+          )}
         </div>
       </section>
     </div>
+  )
+}
+
+function DeleteOrderButton({ orderId, action }: { orderId: string; action: (formData: FormData) => Promise<void> }) {
+  return (
+    <form
+      action={action}
+      onSubmit={(e) => {
+        if (!confirm('Are you sure you want to permanently delete this order? This cannot be undone.')) {
+          e.preventDefault()
+        }
+      }}
+    >
+      <input type="hidden" name="orderId" value={orderId} />
+      <Button type="submit" variant="outline" className="border-red-300 text-red-700 hover:bg-red-50">
+        Delete Order
+      </Button>
+    </form>
   )
 }

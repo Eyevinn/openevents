@@ -2265,22 +2265,19 @@ export function EventForm({
 
     for (let index = 0; index < promoCodesInput.length; index += 1) {
       const promoCode = promoCodesInput[index];
-      if (
-        !promoCode.code.trim() ||
-        !promoCode.discountValue.trim() ||
-        !promoCode.ticketTypeId
-      ) {
-        continue;
-      }
+      const needsValue = promoCode.discountType === "PERCENTAGE" || promoCode.discountType === "FIXED_AMOUNT";
+
+      if (!promoCode.code.trim()) continue;
+      if (needsValue && !promoCode.discountValue.trim()) continue;
 
       // Resolve temp ticket type ID to real ID if needed
-      const resolvedTicketTypeId =
-        tempToRealIdMap.get(promoCode.ticketTypeId) ?? promoCode.ticketTypeId;
+      const resolvedTicketTypeId = promoCode.ticketTypeId
+        ? (tempToRealIdMap.get(promoCode.ticketTypeId) ?? promoCode.ticketTypeId)
+        : "";
       // Skip if ticketTypeId still looks like a temp value (no real ID resolved)
-      if (!resolvedTicketTypeId || resolvedTicketTypeId.startsWith("ticket-"))
+      if (resolvedTicketTypeId && resolvedTicketTypeId.startsWith("ticket-"))
         continue;
 
-      const needsValue = promoCode.discountType === "PERCENTAGE" || promoCode.discountType === "FIXED_AMOUNT";
       const discountValue = needsValue ? Number(promoCode.discountValue) : 0;
       if (needsValue && (Number.isNaN(discountValue) || discountValue <= 0 || discountValue > 100))
         continue;
@@ -2299,7 +2296,8 @@ export function EventForm({
         maxUses,
         minCartAmount,
         isActive: true,
-        ticketTypeIds: [resolvedTicketTypeId],
+        applyToWholeOrder: promoCode.discountType === "FREE_TICKET" ? true : undefined,
+        ticketTypeIds: resolvedTicketTypeId ? [resolvedTicketTypeId] : [],
       };
 
       const isExisting = Boolean(promoCode.id);
@@ -3186,6 +3184,9 @@ export function EventForm({
 
       cleanupObjectUrl("coverImage");
       cleanupObjectUrl("bottomImage");
+
+      // Save succeeded — disable the unsaved-changes guard so navigation is immediate
+      historyGuardActiveRef.current = false;
 
       if (mode === "create" && action === "publish" && eventSlug) {
         // After publishing a new event, navigate to the public page

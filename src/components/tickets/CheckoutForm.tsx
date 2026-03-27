@@ -447,8 +447,8 @@ export function CheckoutForm({ event, groupDiscounts = [] }: CheckoutFormProps) 
     [subtotal, discountAmount]
   )
   const includedVat = useMemo(
-    () => getIncludedVatFromVatInclusiveTotal(subtotal, vatRate),
-    [subtotal, vatRate]
+    () => getIncludedVatFromVatInclusiveTotal(totalAmount, vatRate),
+    [totalAmount, vatRate]
   )
 
   const selectedTicketTypeIds = useMemo(

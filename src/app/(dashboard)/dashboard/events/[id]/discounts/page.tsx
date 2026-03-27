@@ -72,7 +72,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
     const maxTicketsPerOrderRaw = String(formData.get('maxTicketsPerOrder') || '').trim()
     const maxTicketsPerOrder = maxTicketsPerOrderRaw ? Number(maxTicketsPerOrderRaw) : null
     const isActive = String(formData.get('isActive') || 'true') === 'true'
-    const applyToWholeOrder = formData.get('applyToWholeOrder') === 'on'
+    const applyToWholeOrder = discountType === 'FREE_TICKET' ? true : formData.get('applyToWholeOrder') === 'on'
 
     await prisma.discountCode.create({
       data: {
@@ -121,7 +121,7 @@ export default async function DiscountCodesPage({ params, searchParams }: PagePr
     const maxTicketsPerOrderRaw = String(formData.get('maxTicketsPerOrder') || '').trim()
     const maxTicketsPerOrder = maxTicketsPerOrderRaw ? Number(maxTicketsPerOrderRaw) : null
     const isActive = String(formData.get('isActive') || 'true') === 'true'
-    const applyToWholeOrder = formData.get('applyToWholeOrder') === 'on'
+    const applyToWholeOrder = discountType === 'FREE_TICKET' ? true : formData.get('applyToWholeOrder') === 'on'
 
     await prisma.discountCode.update({
       where: { id: existing.id },
