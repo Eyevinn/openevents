@@ -13,7 +13,7 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-const APP_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+const APP_URL = process.env.PUBLIC_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 const cancelOrderInputSchema = z.object({
   reason: z.string().optional(),

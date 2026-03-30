@@ -34,7 +34,7 @@ function getSmtpPass() { return process.env.SMTP_PASSWORD }
 function getEmailMode() { return process.env.EMAIL_MODE || (getSmtpHost() ? 'smtp' : 'development') }
 function getFromEmail() { return process.env.FROM_EMAIL || process.env.EMAIL_FROM || 'noreply@openevents.local' }
 function getAppName() { return process.env.SITE_NAME || process.env.APP_NAME || 'OpenEvents' }
-function getAppUrl() { return process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }
+function getAppUrl() { return process.env.PUBLIC_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000' }
 
 // Create transporter based on mode — called per send to use runtime env vars
 function createTransporter() {
