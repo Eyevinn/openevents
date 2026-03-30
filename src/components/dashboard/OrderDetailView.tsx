@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { formatPaymentMethodLabel } from '@/lib/payments/labels'
@@ -117,15 +118,47 @@ export function OrderDetailView({ order, refundAction, emailAction, markPaidActi
             <input type="hidden" name="orderId" value={order.id} />
             <Button variant="outline" type="submit">Mark Refund Pending</Button>
           </form>
-          <form action={emailAction}>
-            <input type="hidden" name="orderId" value={order.id} />
-            <Button type="submit">Send Email to Buyer</Button>
-          </form>
+          <SendEmailButton orderId={order.id} action={emailAction} />
           {deleteOrderAction && (
             <DeleteOrderButton orderId={order.id} action={deleteOrderAction} />
           )}
         </div>
       </section>
+    </div>
+  )
+}
+
+function SendEmailButton({ orderId, action }: { orderId: string; action: (formData: FormData) => Promise<void> }) {
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setStatus('sending')
+    try {
+      const formData = new FormData(e.currentTarget)
+      await action(formData)
+      setStatus('sent')
+      setTimeout(() => setStatus('idle'), 4000)
+    } catch {
+      setStatus('error')
+      setTimeout(() => setStatus('idle'), 4000)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <form onSubmit={handleSubmit}>
+        <input type="hidden" name="orderId" value={orderId} />
+        <Button type="submit" disabled={status === 'sending'}>
+          {status === 'sending' ? 'Sending...' : 'Send Email to Buyer'}
+        </Button>
+      </form>
+      {status === 'sent' && (
+        <span className="text-sm font-medium text-green-600">Email sent!</span>
+      )}
+      {status === 'error' && (
+        <span className="text-sm font-medium text-red-600">Failed to send email</span>
+      )}
     </div>
   )
 }

@@ -24,10 +24,7 @@ const payOrderSchema = z.object({
   paymentMethod: z.enum(['PAYPAL', 'INVOICE']).optional(),
 })
 
-function getAppUrl(request: NextRequest): string {
-  const url = new URL(request.url)
-  return `${url.protocol}//${url.host}`
-}
+const APP_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
@@ -163,7 +160,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Generate redirect URLs
-    const { returnUrl, cancelUrl } = generatePaymentUrls(getAppUrl(request), orderId)
+    const { returnUrl, cancelUrl } = generatePaymentUrls(APP_URL, orderId)
 
     // Create Stripe checkout session
     const paymentIntent = await createPaymentIntent({

@@ -13,10 +13,7 @@ interface RouteContext {
   params: Promise<{ id: string }>
 }
 
-function getAppUrl(request: NextRequest): string {
-  const url = new URL(request.url)
-  return `${url.protocol}//${url.host}`
-}
+const APP_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 const cancelOrderInputSchema = z.object({
   reason: z.string().optional(),
@@ -53,7 +50,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     })
 
     if (!order) {
-      return NextResponse.redirect(`${getAppUrl(request)}?error=order_not_found`)
+      return NextResponse.redirect(`${APP_URL}?error=order_not_found`)
     }
 
     // Check authentication - if session expired, still redirect to checkout with cancel notice
@@ -62,7 +59,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       // Session expired - redirect to checkout with session_expired flag
       // The checkout page will prompt login but won't lose the context
       return NextResponse.redirect(
-        `${getAppUrl(request)}/events/${order.event.slug}/checkout?cancelled=true&session_expired=true`
+        `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true&session_expired=true`
       )
     }
 
@@ -73,17 +70,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       requesterRoles: user.roles,
     })
     if (!authorized) {
-      return NextResponse.redirect(`${getAppUrl(request)}/checkout-error?error=forbidden`)
+      return NextResponse.redirect(`${APP_URL}/checkout-error?error=forbidden`)
     }
 
     // If already paid or cancelled, redirect appropriately
     if (order.status === 'PAID') {
-      return NextResponse.redirect(`${getAppUrl(request)}/orders/${order.orderNumber}`)
+      return NextResponse.redirect(`${APP_URL}/orders/${order.orderNumber}`)
     }
 
     if (order.status === 'CANCELLED') {
       return NextResponse.redirect(
-        `${getAppUrl(request)}/events/${order.event.slug}/checkout?cancelled=true`
+        `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true`
       )
     }
 
@@ -132,11 +129,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Redirect back to checkout page with cancellation message
     return NextResponse.redirect(
-      `${getAppUrl(request)}/events/${order.event.slug}/checkout?cancelled=true`
+      `${APP_URL}/events/${order.event.slug}/checkout?cancelled=true`
     )
   } catch (error) {
     console.error('[Payment Cancel] Failed to cancel order:', error)
-    return NextResponse.redirect(`${getAppUrl(request)}?error=cancel_failed`)
+    return NextResponse.redirect(`${APP_URL}?error=cancel_failed`)
   }
 }
 
