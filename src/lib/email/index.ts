@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer'
 import PDFDocument from 'pdfkit'
 import QRCode from 'qrcode'
+import { getAppUrl } from '@/lib/url'
 
 // =============================================================================
 // Email Configuration
@@ -26,7 +27,6 @@ import QRCode from 'qrcode'
 const EMAIL_MODE = process.env.EMAIL_MODE || (process.env.NODE_ENV === 'development' ? 'development' : 'smtp')
 const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@openevents.local'
 const APP_NAME = process.env.APP_NAME || 'OpenEvents'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 // Create transporter based on mode
 function createTransporter() {
@@ -144,7 +144,7 @@ export async function sendVerificationEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const verifyUrl = `${APP_URL}/verify-email?token=${token}`
+  const verifyUrl = `${getAppUrl()}/verify-email?token=${token}`
 
   await sendEmail({
     to: email,
@@ -184,7 +184,7 @@ export async function sendPasswordResetEmail(
   email: string,
   token: string
 ): Promise<void> {
-  const resetUrl = `${APP_URL}/reset-password?token=${token}`
+  const resetUrl = `${getAppUrl()}/reset-password?token=${token}`
 
   await sendEmail({
     to: email,
@@ -560,7 +560,7 @@ export async function sendOrderCancellationEmail(
             <p>If you did not request this cancellation or have any questions, please contact the event organizer.</p>
 
             <p style="text-align: center; margin: 30px 0;">
-              <a href="${APP_URL}/events" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+              <a href="${getAppUrl()}/events" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                 Browse More Events
               </a>
             </p>
@@ -721,7 +721,7 @@ export async function sendInvoiceOrderNotificationEmail(
     )
     .join('')
 
-  const dashboardUrl = `${APP_URL}/dashboard/events/${details.eventId}/orders`
+  const dashboardUrl = `${getAppUrl()}/dashboard/events/${details.eventId}/orders`
 
   await sendEmail({
     to: organizerEmail,

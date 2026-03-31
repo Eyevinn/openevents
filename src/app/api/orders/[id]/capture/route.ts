@@ -9,12 +9,11 @@ import { capturePayment, getPaymentStatus } from '@/lib/payments'
 import { generateTicketCreateInput, lockTicketTypes } from '@/lib/orders'
 import { expirePendingOrderIfNeeded } from '@/lib/orders/expirePendingOrder'
 import { formatDateTime } from '@/lib/utils'
+import { getAppUrl } from '@/lib/url'
 
 interface RouteContext {
   params: Promise<{ id: string }>
 }
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 /**
  * Handle Stripe return after user approval.
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const paymentSessionId = searchParams.get('session_id') || searchParams.get('token')
 
     if (!paymentSessionId) {
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=invalid_token`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=invalid_token`)
     }
 
     // Find the order first (before auth check) so we can redirect properly on session expiry
@@ -67,7 +66,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     })
 
     if (!order) {
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=order_not_found`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=order_not_found`)
     }
 
     // Check authentication - allow both authenticated and anonymous orders
@@ -80,7 +79,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!user && !isValidAnonymousAccess) {
       // Session expired for authenticated order - redirect to a helpful status page
       // Include the session id so we can check payment status
-      const statusUrl = new URL(`${APP_URL}/checkout-status/${order.orderNumber}`)
+      const statusUrl = new URL(`${getAppUrl()}/checkout-status/${order.orderNumber}`)
       statusUrl.searchParams.set('session_expired', 'true')
       statusUrl.searchParams.set('session_id', paymentSessionId)
       return NextResponse.redirect(statusUrl.toString())
@@ -112,30 +111,30 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Verify the payment session id matches
     if (order.paymentId !== paymentSessionId) {
       console.error('[Capture] Token mismatch:', { expected: order.paymentId, received: paymentSessionId })
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=invalid_token`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=invalid_token`)
     }
 
     // Check if already paid
     if (order.status === 'PAID') {
-      return NextResponse.redirect(`${APP_URL}/orders/${order.orderNumber}`)
+      return NextResponse.redirect(`${getAppUrl()}/orders/${order.orderNumber}`)
     }
 
     if (order.status === 'PENDING' && order.expiresAt && order.expiresAt <= new Date()) {
       await expirePendingOrderIfNeeded(order.id)
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=reservation_expired`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=reservation_expired`)
     }
 
     // Check if order can be paid
     if (order.status !== 'PENDING' && order.status !== 'PENDING_INVOICE') {
       return NextResponse.redirect(
-        `${APP_URL}/checkout-error?error=invalid_status&status=${order.status}`
+        `${getAppUrl()}/checkout-error?error=invalid_status&status=${order.status}`
       )
     }
 
     const providerPaymentId = paymentSessionId || order.paymentId
 
     if (!providerPaymentId) {
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=no_payment_id`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=no_payment_id`)
     }
 
     // Verify the order is approved
@@ -143,7 +142,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (!paymentStatus.isApproved) {
       console.error('[Capture] Order not approved:', paymentStatus)
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=not_approved`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=not_approved`)
     }
 
     // Capture the payment
@@ -151,7 +150,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (captureResult.status !== 'completed') {
       console.error('[Capture] Payment capture failed:', captureResult)
-      return NextResponse.redirect(`${APP_URL}/checkout-error?error=capture_failed`)
+      return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=capture_failed`)
     }
 
     // Complete the order in database
@@ -307,9 +306,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
     revalidateTag('dashboard-analytics', 'max')
 
     // Redirect to confirmation page
-    return NextResponse.redirect(`${APP_URL}/orders/${paidOrder.orderNumber}`)
+    return NextResponse.redirect(`${getAppUrl()}/orders/${paidOrder.orderNumber}`)
   } catch (error) {
     console.error('[Capture] Failed to capture payment:', error)
-    return NextResponse.redirect(`${APP_URL}/checkout-error?error=capture_exception`)
+    return NextResponse.redirect(`${getAppUrl()}/checkout-error?error=capture_exception`)
   }
 }

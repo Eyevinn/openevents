@@ -15,6 +15,7 @@ import {
 import { generateTicketCreateInput, lockTicketTypes } from '@/lib/orders'
 import { expirePendingOrderIfNeeded } from '@/lib/orders/expirePendingOrder'
 import { formatDateTime } from '@/lib/utils'
+import { getAppUrl } from '@/lib/url'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -23,8 +24,6 @@ interface RouteContext {
 const payOrderSchema = z.object({
   paymentMethod: z.enum(['PAYPAL', 'INVOICE']).optional(),
 })
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
@@ -160,7 +159,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     // Generate redirect URLs
-    const { returnUrl, cancelUrl } = generatePaymentUrls(APP_URL, orderId)
+    const { returnUrl, cancelUrl } = generatePaymentUrls(getAppUrl(), orderId)
 
     // Create Stripe checkout session
     const paymentIntent = await createPaymentIntent({
