@@ -5,7 +5,7 @@ export const buyerInfoSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   title: z.string().optional(),
   email: z.string().email('Invalid email address'),
-  organization: z.string().optional(),
+  organization: z.string().min(1, 'Organization is required'),
   address: z.string().optional(),
   city: z.string().optional(),
   postalCode: z.string().optional(),
@@ -17,7 +17,7 @@ export const checkoutAttendeeSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address'),
   title: z.string().optional(),
-  organization: z.string().optional(),
+  organization: z.string().min(1, 'Organization is required'),
 })
 
 export const orderItemSchema = z.object({

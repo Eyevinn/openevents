@@ -72,6 +72,7 @@ export async function GET(request: Request, context: RouteContext) {
             buyerFirstName: true,
             buyerLastName: true,
             buyerEmail: true,
+            buyerOrganization: true,
             buyerCity: true,
             buyerCountry: true,
             currency: true,
@@ -95,6 +96,7 @@ export async function GET(request: Request, context: RouteContext) {
       { header: 'Attendee first name', key: 'attendeeFirstName', width: 20 },
       { header: 'Attendee last name', key: 'attendeeLastName', width: 20 },
       { header: 'Attendee email', key: 'attendeeEmail', width: 30 },
+      { header: 'Organization', key: 'organization', width: 25 },
       { header: 'Phone number', key: 'phoneNumber', width: 15 },
       { header: 'Purchaser city', key: 'purchaserCity', width: 18 },
       { header: 'Purchaser state', key: 'purchaserState', width: 18 },
@@ -137,6 +139,7 @@ export async function GET(request: Request, context: RouteContext) {
       const attendeeFirstName = ticket.attendeeFirstName || ticket.order.buyerFirstName
       const attendeeLastName = ticket.attendeeLastName || ticket.order.buyerLastName
       const attendeeEmail = ticket.attendeeEmail || ticket.order.buyerEmail
+      const organization = ticket.attendeeOrganization || ticket.order.buyerOrganization || ''
 
       const orderDate = ticket.order.createdAt.toISOString().replace('T', ' ').substring(0, 19)
 
@@ -146,6 +149,7 @@ export async function GET(request: Request, context: RouteContext) {
         attendeeFirstName,
         attendeeLastName,
         attendeeEmail,
+        organization,
         phoneNumber: '',
         purchaserCity: ticket.order.buyerCity || '',
         purchaserState: '',
