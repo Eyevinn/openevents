@@ -39,6 +39,8 @@ export async function GET(_request: Request, context: RouteContext) {
               select: {
                 orgName: true,
                 website: true,
+                orgNumber: true,
+                address: true,
               },
             },
           },
@@ -122,11 +124,11 @@ export async function GET(_request: Request, context: RouteContext) {
       paymentMethod: order.paymentMethod,
       currency: order.currency,
       seller: {
-        name:
-          order.event.organization ||
-          order.event.organizer.orgName ||
-          'Event Organizer',
+        name: order.event.organizer.orgName || 'Event Organizer',
+        displayName: order.event.organization || null,
         website: order.event.organizer.website,
+        orgNumber: order.event.organizer.orgNumber,
+        address: order.event.organizer.address,
       },
       buyer: {
         name: buyerName,

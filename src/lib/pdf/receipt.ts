@@ -2,16 +2,6 @@ import PDFDocument from 'pdfkit'
 import { formatPaymentMethodLabel } from '@/lib/payments/labels'
 import { getIncludedVatFromVatInclusiveTotal } from '@/lib/pricing/vat'
 
-/**
- * Legal entity issuing receipts from this OpenEvents instance.
- * Shown in the header and the footer of every receipt PDF.
- */
-const RECEIPT_ISSUER = {
-  name: 'Eyevinn Technology AB',
-  orgNumber: '556919-9952',
-  address: 'Vasagatan 52, 111 20 Stockholm',
-} as const
-
 export interface ReceiptData {
   orderNumber: string
   orderDate: Date
@@ -21,8 +11,13 @@ export interface ReceiptData {
   currency: string
 
   seller: {
+    // Legal entity name shown as the receipt issuer (e.g. "Eyevinn Technology AB")
     name: string
+    // Optional brand/display name shown as "Organized by" in the event section
+    displayName: string | null
     website: string | null
+    orgNumber: string | null
+    address: string | null
   }
 
   buyer: {
@@ -118,11 +113,18 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     // ---- Header ----
     doc.fontSize(26).font('Helvetica-Bold').text('RECEIPT', pageLeft, 50)
 
-    // Issuer block (legal entity issuing the receipt)
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#000').text(RECEIPT_ISSUER.name, pageLeft, 82)
+    // Issuer block (legal entity issuing the receipt, from the event organizer)
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#000').text(data.seller.name, pageLeft, 82)
     doc.font('Helvetica').fillColor('#555')
-    doc.text(`Org.nr: ${RECEIPT_ISSUER.orgNumber}`, pageLeft, doc.y)
-    doc.text(RECEIPT_ISSUER.address, pageLeft, doc.y)
+    if (data.seller.orgNumber) {
+      doc.text(`Org.nr: ${data.seller.orgNumber}`, pageLeft, doc.y)
+    }
+    if (data.seller.address) {
+      doc.text(data.seller.address, pageLeft, doc.y)
+    }
+    if (data.seller.website) {
+      doc.text(data.seller.website, pageLeft, doc.y)
+    }
     doc.fillColor('#000')
 
     // Right side: receipt metadata box
@@ -198,8 +200,9 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     doc.fontSize(10).font('Helvetica-Bold').text(data.event.title, col2X, doc.y, { width: col2Width })
     doc.font('Helvetica').text(formatDateTime(data.event.startDate), col2X, doc.y, { width: col2Width })
     doc.text(data.event.location, col2X, doc.y, { width: col2Width })
-    if (data.seller.name) {
-      doc.text(`Organized by ${data.seller.name}`, col2X, doc.y, { width: col2Width })
+    const organizerDisplay = data.seller.displayName || data.seller.name
+    if (organizerDisplay && organizerDisplay !== data.seller.name) {
+      doc.text(`Organized by ${organizerDisplay}`, col2X, doc.y, { width: col2Width })
     }
     const col2Bottom = doc.y
 
@@ -330,8 +333,11 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     // ---- Footer ----
     doc.moveDown(2)
     doc.fontSize(9).font('Helvetica').fillColor('#666')
+    const footerIssuer = data.seller.orgNumber
+      ? `${data.seller.name} (Org.nr ${data.seller.orgNumber})`
+      : data.seller.name
     doc.text(
-      `Receipt for order #${data.orderNumber} issued by ${RECEIPT_ISSUER.name} (Org.nr ${RECEIPT_ISSUER.orgNumber}).`,
+      `Receipt for order #${data.orderNumber} issued by ${footerIssuer}.`,
       pageLeft,
       doc.y,
       { width: colWidth, align: 'center' }

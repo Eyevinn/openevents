@@ -8,6 +8,8 @@ type OrganizerProfile = {
   description: string | null
   logo: string | null
   website: string | null
+  orgNumber: string | null
+  address: string | null
   socialLinks: Prisma.JsonValue
 }
 
@@ -29,6 +31,8 @@ export async function requireOrganizerProfile(): Promise<RequireOrganizerResult>
       description: true,
       logo: true,
       website: true,
+      orgNumber: true,
+      address: true,
       socialLinks: true,
     },
   })
