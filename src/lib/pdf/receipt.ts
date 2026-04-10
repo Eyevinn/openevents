@@ -285,15 +285,27 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     doc.moveDown(0.4)
 
     // ---- Totals ----
-    const totalsLabelX = 360
+    // Label column is wide enough to fit long discount descriptions without
+    // wrapping onto two lines (e.g. "Discount (group 3+, 18.67% off)").
+    const totalsLabelX = 270
     const totalsValueX = colLine
     const totalsWidth = pageRight - totalsValueX
 
     const writeTotalsRow = (label: string, value: string, bold = false) => {
       const rowY = doc.y
       doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(10)
-      doc.text(label, totalsLabelX, rowY, { width: totalsValueX - totalsLabelX - 10, align: 'right' })
+      doc.text(label, totalsLabelX, rowY, {
+        width: totalsValueX - totalsLabelX - 10,
+        align: 'right',
+      })
+      const labelBottom = doc.y
       doc.text(value, totalsValueX, rowY, { width: totalsWidth, align: 'right' })
+      const valueBottom = doc.y
+      // PDFKit's text() with an explicit y resets doc.y to the single-line end
+      // position of the last call. If the label wrapped to more lines than the
+      // value did, we need to advance past whichever line ended lower,
+      // otherwise the next row overlaps the wrapped label.
+      doc.y = Math.max(labelBottom, valueBottom)
       doc.moveDown(0.3)
     }
 
@@ -311,7 +323,10 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     if (data.discountAmount > 0) {
       writeTotalsRow(
         data.discountLabel ? `Discount (${data.discountLabel})` : 'Discount',
-        `−${formatMoney(discountExVat, data.currency)}`
+        // ASCII hyphen only: PDFKit's Helvetica uses WinAnsi encoding, which
+        // does not include U+2212 (Unicode minus). Using it would render as a
+        // stray "quote" glyph next to the amount.
+        `-${formatMoney(discountExVat, data.currency)}`
       )
     }
 
