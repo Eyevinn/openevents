@@ -1,5 +1,16 @@
 import PDFDocument from 'pdfkit'
 import { formatPaymentMethodLabel } from '@/lib/payments/labels'
+import { getIncludedVatFromVatInclusiveTotal } from '@/lib/pricing/vat'
+
+/**
+ * Legal entity issuing receipts from this OpenEvents instance.
+ * Shown in the header and the footer of every receipt PDF.
+ */
+const RECEIPT_ISSUER = {
+  name: 'Eyevinn Technology AB',
+  orgNumber: '556919-9952',
+  address: 'Vasagatan 52, 111 20 Stockholm',
+} as const
 
 export interface ReceiptData {
   orderNumber: string
@@ -106,14 +117,12 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
 
     // ---- Header ----
     doc.fontSize(26).font('Helvetica-Bold').text('RECEIPT', pageLeft, 50)
-    doc
-      .fontSize(10)
-      .font('Helvetica')
-      .fillColor('#555')
-      .text(data.seller.name, pageLeft, 80)
-    if (data.seller.website) {
-      doc.text(data.seller.website, pageLeft, 94)
-    }
+
+    // Issuer block (legal entity issuing the receipt)
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#000').text(RECEIPT_ISSUER.name, pageLeft, 82)
+    doc.font('Helvetica').fillColor('#555')
+    doc.text(`Org.nr: ${RECEIPT_ISSUER.orgNumber}`, pageLeft, doc.y)
+    doc.text(RECEIPT_ISSUER.address, pageLeft, doc.y)
     doc.fillColor('#000')
 
     // Right side: receipt metadata box
@@ -189,6 +198,9 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     doc.fontSize(10).font('Helvetica-Bold').text(data.event.title, col2X, doc.y, { width: col2Width })
     doc.font('Helvetica').text(formatDateTime(data.event.startDate), col2X, doc.y, { width: col2Width })
     doc.text(data.event.location, col2X, doc.y, { width: col2Width })
+    if (data.seller.name) {
+      doc.text(`Organized by ${data.seller.name}`, col2X, doc.y, { width: col2Width })
+    }
     const col2Bottom = doc.y
 
     doc.y = Math.max(col1Bottom, col2Bottom)
@@ -209,14 +221,29 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     const colUnit = 380
     const colLine = 470
 
-    doc.fontSize(10).font('Helvetica-Bold').fillColor('#555')
+    // VAT-exclusive conversion: order.subtotal / totalAmount / unitPrice in the
+    // database are stored VAT-inclusive (see src/lib/orders/index.ts), so we
+    // convert back using the same cents-based rounding as
+    // getIncludedVatFromVatInclusiveTotal in src/lib/pricing/vat.ts.
+    const hasVat = data.vatRate > 0
+    const toExVat = (vatInclusive: number): number => {
+      if (!hasVat) return vatInclusive
+      return Number(
+        (vatInclusive - getIncludedVatFromVatInclusiveTotal(vatInclusive, data.vatRate)).toFixed(2)
+      )
+    }
+
+    const unitPriceHeader = hasVat ? 'Unit price (excl. VAT)' : 'Unit price'
+    const amountHeader = hasVat ? 'Amount (excl. VAT)' : 'Amount'
+
+    doc.fontSize(9).font('Helvetica-Bold').fillColor('#555')
     const headerY = doc.y
     doc.text('Description', colItem, headerY)
     doc.text('Qty', colQty, headerY, { width: 50, align: 'right' })
-    doc.text('Unit price', colUnit, headerY, { width: 80, align: 'right' })
-    doc.text('Amount', colLine, headerY, { width: pageRight - colLine, align: 'right' })
+    doc.text(unitPriceHeader, colUnit, headerY, { width: 80, align: 'right' })
+    doc.text(amountHeader, colLine, headerY, { width: pageRight - colLine, align: 'right' })
     doc.fillColor('#000')
-    doc.moveDown(0.4)
+    doc.moveDown(0.6)
     doc
       .strokeColor('#dddddd')
       .moveTo(pageLeft, doc.y)
@@ -227,15 +254,18 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
 
     doc.font('Helvetica').fontSize(10)
     for (const item of data.items) {
+      const unitPriceDisplay = toExVat(item.unitPrice)
+      const lineTotalDisplay = toExVat(item.lineTotal)
+
       const rowY = doc.y
       doc.text(item.name, colItem, rowY, { width: colQty - colItem - 10 })
       const descBottom = doc.y
       doc.text(String(item.quantity), colQty, rowY, { width: 50, align: 'right' })
-      doc.text(formatMoney(item.unitPrice, data.currency), colUnit, rowY, {
+      doc.text(formatMoney(unitPriceDisplay, data.currency), colUnit, rowY, {
         width: 80,
         align: 'right',
       })
-      doc.text(formatMoney(item.lineTotal, data.currency), colLine, rowY, {
+      doc.text(formatMoney(lineTotalDisplay, data.currency), colLine, rowY, {
         width: pageRight - colLine,
         align: 'right',
       })
@@ -264,16 +294,25 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
       doc.moveDown(0.3)
     }
 
-    writeTotalsRow('Subtotal', formatMoney(data.subtotal, data.currency))
+    // All totals are shown excl. VAT, with a separate VAT row, ending in the
+    // VAT-inclusive grand total. For a 7500 SEK VAT-inclusive order at 25%
+    // VAT: subtotal = 6000, VAT = 1500, total = 7500.
+    const subtotalExVat = toExVat(data.subtotal)
+    const discountExVat = toExVat(data.discountAmount)
+
+    writeTotalsRow(
+      hasVat ? 'Subtotal (excl. VAT)' : 'Subtotal',
+      formatMoney(subtotalExVat, data.currency)
+    )
 
     if (data.discountAmount > 0) {
       writeTotalsRow(
         data.discountLabel ? `Discount (${data.discountLabel})` : 'Discount',
-        `−${formatMoney(data.discountAmount, data.currency)}`
+        `−${formatMoney(discountExVat, data.currency)}`
       )
     }
 
-    if (data.vatRate > 0) {
+    if (hasVat) {
       const vatPercent = Math.round(data.vatRate * 100)
       writeTotalsRow(`VAT (${vatPercent}%)`, formatMoney(data.vatAmount, data.currency))
     }
@@ -292,7 +331,7 @@ export function generateReceiptPdf(data: ReceiptData): Promise<Buffer> {
     doc.moveDown(2)
     doc.fontSize(9).font('Helvetica').fillColor('#666')
     doc.text(
-      `Receipt for order #${data.orderNumber} issued by ${data.seller.name}.`,
+      `Receipt for order #${data.orderNumber} issued by ${RECEIPT_ISSUER.name} (Org.nr ${RECEIPT_ISSUER.orgNumber}).`,
       pageLeft,
       doc.y,
       { width: colWidth, align: 'center' }
