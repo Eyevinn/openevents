@@ -1,88 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
-import { Prisma } from '@prisma/client'
 import { getSession } from '@/lib/auth'
-import { prisma } from '@/lib/db'
 import {
   sendOrderConfirmationEmail,
   sendInvoiceOrderNotificationEmail,
   sendAttendeeTicketEmailsForOrder,
 } from '@/lib/email'
-import { lockTicketTypes, prepareOrderItems, generateTicketCreateInput } from '@/lib/orders'
-import { claimDiscountCodeUsage, getDiscountUsageUnitsFromItems } from '@/lib/orders/discountUsage'
-import {
-  getCheckoutUnavailableReason,
-  getOrderErrorForCheckoutUnavailableReason,
-} from '@/lib/orders/checkoutAvailability'
+import { createOrder } from '@/lib/orders/createOrder'
 import { getOrderReservationTtlMinutes } from '@/lib/orders/reservation'
-import {
-  calculateDiscountAmount,
-  decimalToNumber,
-  getApplicableTicketTypeIds,
-  getDiscountCodeRemainingTicketUses,
-  normalizeDiscountCode,
-} from '@/lib/tickets'
 import { createOrderSchema } from '@/lib/validations'
-import { formatDateTime, generateOrderNumber, isTicketAvailable } from '@/lib/utils'
-import { getVatRateForCountryNameOrCode } from '@/lib/pricing/vatRates'
-import { getIncludedVatFromVatInclusiveTotal } from '@/lib/pricing/vat'
-
-type DiscountCodeWithLinks = Prisma.DiscountCodeGetPayload<{
-  include: { ticketTypes: true }
-}>
-
-type GroupDiscountRecord = {
-  id: string
-  ticketTypeId: string | null
-  minQuantity: number
-  discountType: string
-  discountValue: Prisma.Decimal
-  isActive: boolean
-}
-
-function calculateGroupDiscountAmount(
-  groupDiscount: GroupDiscountRecord,
-  items: { ticketTypeId: string; quantity: number; unitPrice: number; totalPrice: number }[],
-  vatRate: number
-): number {
-  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0)
-  const subtotal = items.reduce((sum, item) => sum + item.totalPrice, 0)
-  const value = decimalToNumber(groupDiscount.discountValue)
-  // TIER_PRICE: organizer enters the exact per-ticket price (ex-VAT, matching
-  // ticketType.price convention) that applies when minQuantity is reached.
-  // Convert to VAT-inclusive so it matches the stored item.unitPrice.
-  const targetUnitInclVat = value * (1 + (vatRate ?? 0))
-
-  if (groupDiscount.ticketTypeId === null) {
-    // Global discount - check total quantity
-    if (totalQuantity < groupDiscount.minQuantity) return 0
-
-    if (groupDiscount.discountType === 'PERCENTAGE') {
-      return Number(Math.min(subtotal, (subtotal * value) / 100).toFixed(2))
-    } else if (groupDiscount.discountType === 'TIER_PRICE') {
-      const reduced = items.reduce(
-        (sum, item) => sum + Math.max(0, item.unitPrice - targetUnitInclVat) * item.quantity,
-        0
-      )
-      return Number(Math.min(subtotal, reduced).toFixed(2))
-    } else {
-      return Number(Math.min(subtotal, value).toFixed(2))
-    }
-  } else {
-    // Ticket-specific discount
-    const applicableItem = items.find(item => item.ticketTypeId === groupDiscount.ticketTypeId)
-    if (!applicableItem || applicableItem.quantity < groupDiscount.minQuantity) return 0
-
-    if (groupDiscount.discountType === 'PERCENTAGE') {
-      return Number(Math.min(applicableItem.totalPrice, (applicableItem.totalPrice * value) / 100).toFixed(2))
-    } else if (groupDiscount.discountType === 'TIER_PRICE') {
-      const reduced = Math.max(0, applicableItem.unitPrice - targetUnitInclVat) * applicableItem.quantity
-      return Number(Math.min(applicableItem.totalPrice, reduced).toFixed(2))
-    } else {
-      return Number(Math.min(applicableItem.totalPrice, value).toFixed(2))
-    }
-  }
-}
+import { formatDateTime } from '@/lib/utils'
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,7 +18,7 @@ export async function POST(request: NextRequest) {
         process.env.NEXT_PUBLIC_ORDER_RESERVATION_TTL_MINUTES
     )
 
-    // Get session optionally - allow both authenticated and anonymous orders
+    // Get session optionally — allow both authenticated and anonymous orders
     const session = await getSession()
     const user = session?.user || null
 
@@ -109,18 +36,14 @@ export async function POST(request: NextRequest) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        {
-          error: 'Validation failed',
-          details: parsed.error.flatten(),
-        },
+        { error: 'Validation failed', details: parsed.error.flatten() },
         { status: 400 }
       )
     }
 
     const input = parsed.data
-    // Use buyer email from form - always required regardless of auth status
-    const buyerEmail = input.buyer.email?.trim()
 
+    const buyerEmail = input.buyer.email?.trim()
     if (!buyerEmail) {
       return NextResponse.json(
         { error: 'Buyer email is required to place an order' },
@@ -128,493 +51,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const createdOrder = await prisma.$transaction(
-      async (tx) => {
-        const event = await tx.event.findUnique({
-          where: { id: input.eventId },
-          select: {
-            id: true,
-            title: true,
-            slug: true,
-            startDate: true,
-            endDate: true,
-            locationType: true,
-            venue: true,
-            city: true,
-            country: true,
-            onlineUrl: true,
-            status: true,
-            ticketTypes: {
-              where: { isVisible: true },
-              select: {
-                salesStartDate: true,
-                salesEndDate: true,
-                maxCapacity: true,
-                soldCount: true,
-                reservedCount: true,
-                isVisible: true,
-              },
-            },
-          },
-        })
-
-        if (!event) {
-          throw new Error('Event not found')
-        }
-
-        const checkoutUnavailableReason = getCheckoutUnavailableReason(event)
-        if (checkoutUnavailableReason) {
-          throw new Error(getOrderErrorForCheckoutUnavailableReason(checkoutUnavailableReason))
-        }
-
-        const ticketTypeIds = Array.from(new Set(input.items.map((item) => item.ticketTypeId)))
-
-        await lockTicketTypes(tx, ticketTypeIds)
-
-        const ticketTypes = await tx.ticketType.findMany({
-          where: {
-            eventId: input.eventId,
-            id: {
-              in: ticketTypeIds,
-            },
-          },
-          select: {
-            id: true,
-            name: true,
-            price: true,
-            currency: true,
-            minPerOrder: true,
-            maxPerOrder: true,
-            maxCapacity: true,
-            soldCount: true,
-            reservedCount: true,
-            salesStartDate: true,
-            salesEndDate: true,
-          },
-        })
-
-        if (ticketTypes.length !== ticketTypeIds.length) {
-          throw new Error('One or more ticket types were not found for this event')
-        }
-
-        const vatRate = getVatRateForCountryNameOrCode(event.country ?? '')
-        const preparedOrder = prepareOrderItems(ticketTypes, input.items, { vatRate })
-
-        for (const item of preparedOrder.items) {
-          const ticketType = ticketTypes.find((ticket) => ticket.id === item.ticketTypeId)
-
-          if (!ticketType) {
-            throw new Error('Ticket type not found')
-          }
-
-          const available = isTicketAvailable(
-            ticketType.salesStartDate,
-            ticketType.salesEndDate,
-            ticketType.maxCapacity,
-            ticketType.soldCount,
-            ticketType.reservedCount
-          )
-
-          if (!available) {
-            throw new Error(`${ticketType.name} is not currently available`) // includes sold out / time-window
-          }
-
-          if (ticketType.maxCapacity !== null) {
-            const remaining = ticketType.maxCapacity - ticketType.soldCount - ticketType.reservedCount
-            if (remaining < item.quantity) {
-              throw new Error(
-                `${ticketType.name} does not have enough remaining capacity (${remaining} left)`
-              )
-            }
-          }
-        }
-
-        let discountCodeRecord: DiscountCodeWithLinks | null = null
-        let discountUsageUnits = 0
-        let discountApplicableTicketTypeIds: string[] = []
-        let promoCodeDiscountAmount = 0
-        let promoCodeError: string | null = null // Track promo code validation errors
-
-        if (input.discountCode) {
-          const foundDiscountCode = await tx.discountCode.findUnique({
-            where: {
-              eventId_code: {
-                eventId: input.eventId,
-                code: normalizeDiscountCode(input.discountCode),
-              },
-            },
-            include: {
-              ticketTypes: true,
-            },
-          })
-
-          if (!foundDiscountCode) {
-            promoCodeError = 'Discount code not found'
-          } else {
-            const now = new Date()
-            if (
-              !foundDiscountCode.isActive ||
-              (foundDiscountCode.validFrom && foundDiscountCode.validFrom > now) ||
-              (foundDiscountCode.validUntil && foundDiscountCode.validUntil < now)
-            ) {
-              promoCodeError = 'Discount code is inactive, expired, or fully used'
-            } else {
-              discountApplicableTicketTypeIds = getApplicableTicketTypeIds(foundDiscountCode)
-              const appliesToAll = discountApplicableTicketTypeIds.length === 0
-
-              if (discountApplicableTicketTypeIds.length > 0) {
-                const hasApplicableItem = preparedOrder.items.some((item) =>
-                  discountApplicableTicketTypeIds.includes(item.ticketTypeId)
-                )
-
-                if (!hasApplicableItem) {
-                  promoCodeError = 'Discount code does not apply to selected ticket types'
-                }
-              }
-
-              if (!promoCodeError) {
-                if (foundDiscountCode.maxTicketsPerOrder !== null) {
-                  // discountUsageUnits will be set accurately in the discountableSubtotal block below
-                  // For the maxUses check, use the capped count as an upper bound
-                  const applicableItemsForCap = preparedOrder.items.filter((item) =>
-                    appliesToAll ? true : discountApplicableTicketTypeIds.includes(item.ticketTypeId)
-                  )
-                  const ticketPricesForCap = applicableItemsForCap
-                    .flatMap((item) => Array(item.quantity).fill(item.unitPrice) as number[])
-                    .sort((a, b) => b - a)
-                  discountUsageUnits = ticketPricesForCap.slice(0, foundDiscountCode.maxTicketsPerOrder).length
-                } else {
-                  discountUsageUnits = foundDiscountCode.applyToWholeOrder
-                    ? getDiscountUsageUnitsFromItems(
-                        preparedOrder.items.filter((item) =>
-                          appliesToAll ? true : discountApplicableTicketTypeIds.includes(item.ticketTypeId)
-                        )
-                      )
-                    : 1 // Single-ticket discount uses 1 unit
-                }
-
-                if (foundDiscountCode.maxUses !== null) {
-                  const remainingUses = getDiscountCodeRemainingTicketUses(foundDiscountCode) ?? 0
-                  if (discountUsageUnits > remainingUses) {
-                    promoCodeError = 'Discount code has no remaining uses for this quantity of tickets.'
-                  }
-                }
-              }
-
-              if (!promoCodeError) {
-                // Calculate promo code discount amount
-                // If maxTicketsPerOrder is set, only discount that many tickets (most expensive first)
-                let discountableSubtotal: number
-                const applicableItems = preparedOrder.items.filter(
-                  (item) => appliesToAll || discountApplicableTicketTypeIds.includes(item.ticketTypeId)
-                )
-
-                if (foundDiscountCode.maxTicketsPerOrder !== null) {
-                  const ticketPrices = applicableItems
-                    .flatMap((item) => Array(item.quantity).fill(item.unitPrice) as number[])
-                    .sort((a, b) => b - a) // most expensive first
-                  const cappedPrices = ticketPrices.slice(0, foundDiscountCode.maxTicketsPerOrder)
-                  discountableSubtotal = Number(
-                    cappedPrices.reduce((sum, p) => sum + p, 0).toFixed(2)
-                  )
-                  discountUsageUnits = cappedPrices.length
-                } else if (foundDiscountCode.applyToWholeOrder) {
-                  discountableSubtotal = applicableItems.reduce((sum, item) =>
-                    Number((sum + item.totalPrice).toFixed(2)), 0)
-                } else {
-                  // Apply to 1 ticket only — use the most expensive applicable unit price
-                  const maxUnitPrice = Math.max(0, ...applicableItems.map((item) => item.unitPrice))
-                  discountableSubtotal = maxUnitPrice
-                }
-
-                if (foundDiscountCode.minCartAmount !== null) {
-                  const minQuantity = decimalToNumber(foundDiscountCode.minCartAmount)
-                  const totalApplicableQuantity = preparedOrder.items.reduce((sum, item) => {
-                    if (appliesToAll || discountApplicableTicketTypeIds.includes(item.ticketTypeId)) {
-                      return sum + item.quantity
-                    }
-                    return sum
-                  }, 0)
-                  if (totalApplicableQuantity < minQuantity) {
-                    promoCodeError = `At least ${minQuantity} ticket(s) of the applicable type are required for this discount code`
-                  }
-                }
-
-                if (!promoCodeError) {
-                  discountCodeRecord = foundDiscountCode
-                  promoCodeDiscountAmount = calculateDiscountAmount(
-                    discountableSubtotal,
-                    foundDiscountCode.discountType,
-                    decimalToNumber(foundDiscountCode.discountValue)
-                  )
-                }
-              }
-            }
-          }
-        }
-
-        // Fetch and validate group discount if provided
-        let groupDiscountRecord: GroupDiscountRecord | null = null
-        let groupDiscountAmount = 0
-
-        if (input.groupDiscountId) {
-          const gd = await tx.groupDiscount.findUnique({
-            where: { id: input.groupDiscountId },
-            select: {
-              id: true,
-              eventId: true,
-              ticketTypeId: true,
-              minQuantity: true,
-              discountType: true,
-              discountValue: true,
-              isActive: true,
-            },
-          })
-
-          if (gd && gd.eventId === input.eventId && gd.isActive) {
-            groupDiscountRecord = gd
-            groupDiscountAmount = calculateGroupDiscountAmount(gd, preparedOrder.items, vatRate)
-          }
-        }
-
-        // Apply discounts based on discount code type
-        const subtotal = preparedOrder.subtotal
-        let discountAmount = 0
-        let appliedGroupDiscountId: string | null = null
-        let appliedDiscountCodeId: string | null = null
-        let promoCodeIgnoredForGroupDiscount = false
-
-        const isInvoiceCode = discountCodeRecord?.discountType === 'INVOICE'
-        const isFreeNonInvoiceCode = discountCodeRecord && !isInvoiceCode &&
-          (discountCodeRecord.discountType === 'FREE_TICKET' ||
-           (discountCodeRecord.discountType === 'PERCENTAGE' && decimalToNumber(discountCodeRecord.discountValue) >= 100))
-
-        if (isInvoiceCode) {
-          // Invoice codes stack with group discounts: apply group discount for price, invoice for payment method
-          discountAmount = groupDiscountAmount
-          appliedGroupDiscountId = groupDiscountRecord?.id ?? null
-          appliedDiscountCodeId = discountCodeRecord?.id ?? null
-          // Don't consume ticket-based usage for invoice codes (they only change payment method)
-          discountUsageUnits = 0
-        } else if (isFreeNonInvoiceCode) {
-          // Non-invoice 100% off codes: order is free, ignore group discount
-          discountAmount = promoCodeDiscountAmount
-          appliedDiscountCodeId = discountCodeRecord?.id ?? null
-        } else if (groupDiscountAmount > promoCodeDiscountAmount) {
-          // Group discount wins
-          discountAmount = groupDiscountAmount
-          appliedGroupDiscountId = groupDiscountRecord?.id ?? null
-          // Don't claim promo code usage since we're not using it
-          discountUsageUnits = 0
-          // Track if we ignored a valid promo code for a better group discount
-          if (promoCodeDiscountAmount > 0) {
-            promoCodeIgnoredForGroupDiscount = true
-          }
-        } else if (promoCodeDiscountAmount > 0) {
-          // Promo code wins (or tie goes to promo code)
-          discountAmount = promoCodeDiscountAmount
-          appliedDiscountCodeId = discountCodeRecord?.id ?? null
-        } else if (promoCodeError && groupDiscountAmount > 0) {
-          // Promo code was invalid but group discount applies - use group discount
-          discountAmount = groupDiscountAmount
-          appliedGroupDiscountId = groupDiscountRecord?.id ?? null
-          promoCodeIgnoredForGroupDiscount = true
-        } else if (promoCodeError) {
-          // Promo code was invalid and no group discount available - throw the error
-          throw new Error(promoCodeError)
-        }
-
-        const totalAmount = Number(Math.max(0, subtotal - discountAmount).toFixed(2))
-        const vatAmount = getIncludedVatFromVatInclusiveTotal(totalAmount, vatRate)
-
-        let status: 'PENDING' | 'PENDING_INVOICE' | 'PAID' = 'PENDING'
-        let paymentMethod: 'PAYPAL' | 'INVOICE' | 'FREE' = 'PAYPAL'
-
-        // A zero-total order is never invoiced — even when the applied discount
-        // code is INVOICE-typed (e.g. an INVOICE code used on a free ticket
-        // type, or stacked with a 100% group discount).
-        if (totalAmount === 0) {
-          status = 'PAID'
-          paymentMethod = 'FREE'
-        } else if (discountCodeRecord?.discountType === 'INVOICE') {
-          status = 'PAID'
-          paymentMethod = 'INVOICE'
-        } else if (discountCodeRecord?.discountType === 'FREE_TICKET') {
-          status = 'PAID'
-          paymentMethod = 'FREE'
-        }
-
-        const now = new Date()
-        // PENDING orders no longer auto-expire; organizers manage them manually
-        // via the dashboard (reminder flow + manual cancel).
-        const expiresAt = null
-
-        const order = await tx.order.create({
-          data: {
-            orderNumber: generateOrderNumber(),
-            userId: user?.id, // Associate with user if logged in
-            eventId: input.eventId,
-            discountCodeId: appliedDiscountCodeId,
-            groupDiscountId: appliedGroupDiscountId,
-            buyerFirstName: input.buyer.firstName,
-            buyerLastName: input.buyer.lastName,
-            buyerTitle: input.buyer.title,
-            buyerEmail: buyerEmail,
-            buyerOrganization: input.buyer.organization,
-            buyerAddress: input.buyer.address,
-            buyerCity: input.buyer.city,
-            buyerPostalCode: input.buyer.postalCode,
-            buyerCountry: input.buyer.country,
-            subtotal,
-            discountAmount,
-            totalAmount,
-            vatRate,
-            vatAmount,
-            currency: ticketTypes[0]?.currency ?? 'SEK',
-            status,
-            paymentMethod,
-            expiresAt,
-            paidAt: status === 'PAID' ? now : null,
-          },
-          include: {
-            items: true,
-            event: true,
-            tickets: true,
-          },
-        })
-
-        // Build a map of attendee data from the request, keyed by ticketTypeId
-        const attendeesByTicketType = new Map(
-          input.items
-            .filter((item) => item.attendees && item.attendees.length > 0)
-            .map((item) => [item.ticketTypeId, item.attendees!])
-        )
-
-        if (preparedOrder.items.length > 0) {
-          await tx.orderItem.createMany({
-            data: preparedOrder.items.map((item) => ({
-              orderId: order.id,
-              ticketTypeId: item.ticketTypeId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              totalPrice: item.totalPrice,
-              attendeeData: attendeesByTicketType.get(item.ticketTypeId) ?? undefined,
-            })),
-          })
-        }
-
-        if (status === 'PAID') {
-          for (const item of preparedOrder.items) {
-            await tx.ticketType.update({
-              where: { id: item.ticketTypeId },
-              data: {
-                soldCount: {
-                  increment: item.quantity,
-                },
-              },
-            })
-          }
-
-          const tickets = generateTicketCreateInput(
-            order.id,
-            preparedOrder.items.map((item) => ({
-              ...item,
-              attendees: attendeesByTicketType.get(item.ticketTypeId),
-            }))
-          )
-          if (tickets.length > 0) {
-            await tx.ticket.createMany({ data: tickets })
-          }
-        } else {
-          for (const item of preparedOrder.items) {
-            await tx.ticketType.update({
-              where: { id: item.ticketTypeId },
-              data: {
-                reservedCount: {
-                  increment: item.quantity,
-                },
-              },
-            })
-          }
-        }
-
-        // Only claim discount code usage if the promo code was actually applied (not when group discount won)
-        if (discountCodeRecord && appliedDiscountCodeId && discountUsageUnits > 0) {
-          const usageClaimed = await claimDiscountCodeUsage(
-            tx,
-            discountCodeRecord.id,
-            discountUsageUnits,
-            discountCodeRecord.maxUses
-          )
-
-          if (!usageClaimed) {
-            throw new Error('Discount code has no remaining uses for this quantity of tickets.')
-          }
-        }
-
-        const finalOrder = await tx.order.findUniqueOrThrow({
-          where: { id: order.id },
-          include: {
-            items: {
-              include: {
-                ticketType: {
-                  select: {
-                    name: true,
-                  },
-                },
-              },
-            },
-            tickets: true,
-            groupDiscount: {
-              select: {
-                minQuantity: true,
-                discountType: true,
-                discountValue: true,
-              },
-            },
-            discountCode: {
-              select: {
-                code: true,
-              },
-            },
-            event: {
-              select: {
-                id: true,
-                title: true,
-                startDate: true,
-                locationType: true,
-                venue: true,
-                city: true,
-                country: true,
-                onlineUrl: true,
-                organizer: {
-                  select: {
-                    user: {
-                      select: {
-                        email: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        })
-
-        // Return order with promo code warning if applicable
-        return {
-          order: finalOrder,
-          promoCodeWarning: promoCodeError && promoCodeIgnoredForGroupDiscount
-            ? `${promoCodeError}. A group discount was applied instead.`
-            : null,
-        }
-      },
-      {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
-      }
-    )
-
-    const { order, promoCodeWarning } = createdOrder
+    const { order, promoCodeWarning } = await createOrder(input, { userId: user?.id })
 
     revalidateTag('event-analytics', 'max')
     revalidateTag('dashboard-analytics', 'max')
@@ -623,9 +60,7 @@ export async function POST(request: NextRequest) {
       const eventLocation =
         order.event.locationType === 'ONLINE'
           ? order.event.onlineUrl || 'Online event'
-          : [order.event.venue, order.event.city, order.event.country]
-              .filter(Boolean)
-              .join(', ')
+          : [order.event.venue, order.event.city, order.event.country].filter(Boolean).join(', ')
       const eventDate = formatDateTime(order.event.startDate)
       const buyerName = `${order.buyerFirstName} ${order.buyerLastName}`
 
@@ -647,7 +82,6 @@ export async function POST(request: NextRequest) {
         ticketCodes: order.tickets.map((t) => t.ticketCode),
       })
 
-      // Send each non-buyer attendee their own ticket email
       await sendAttendeeTicketEmailsForOrder({
         orderNumber: order.orderNumber,
         buyerEmail: order.buyerEmail,
@@ -660,7 +94,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Notify organizer of new invoice order
     if (order.status === 'PENDING_INVOICE') {
       const organizerEmail = order.event.organizer?.user?.email
       if (organizerEmail) {
@@ -743,7 +176,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 400 })
       }
 
-      if (error.message.includes('Minimum quantity') || error.message.includes('Maximum quantity')) {
+      if (
+        error.message.includes('Minimum quantity') ||
+        error.message.includes('Maximum quantity')
+      ) {
         return NextResponse.json({ error: error.message }, { status: 400 })
       }
     }
